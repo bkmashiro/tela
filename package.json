@@ -1,0 +1,18 @@
+{
+  "name": "tela",
+  "version": "0.1.0",
+  "description": "LLM-native HTML page composer — layout primitives, aesthetic validation, MCP server",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "tela": "dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "node --experimental-vm-modules node_modules/.bin/jest",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": ["llm", "html", "layout", "mcp", "design"],
+  "license": "MIT"
+}
