@@ -553,6 +553,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
+      case 'extract_html': {
+        const htmlInput = a['html'] as string;
+        if (!htmlInput || typeof htmlInput !== 'string') {
+          throw new Error('extract_html requires an "html" string parameter.');
+        }
+        const extractionResult = extract(htmlInput);
+        return {
+          content: [{ type: 'text', text: JSON.stringify(extractionResult) }],
+        };
+      }
+
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
