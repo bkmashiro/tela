@@ -13,11 +13,18 @@ import { DocumentStore } from './store.js';
 import { COMPONENT_REGISTRY, listComponents } from '../primitives/index.js';
 import { THEME_NAMES } from '../tokens/types.js';
 import { THEME_PRESETS, WARM_EDITORIAL } from '../tokens/presets.js';
+import { runChecks } from '../checker/index.js';
+import type { CheckReport, AstPatch } from '../checker/types.js';
+import { extract } from '../extractor/index.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
 const store = new DocumentStore();
+
+// ─── Per-document check report storage (for apply_fix) ───────────────────────
+/** Maps doc_id → latest CheckReport (so apply_fix can look up patches). */
+const lastCheckReports = new Map<string, CheckReport>();
 
 // ─── Tool definitions ─────────────────────────────────────────────────────────
 
@@ -209,6 +216,17 @@ const TOOLS = [
     name: 'list_modifiers',
     description: 'List all available modifiers with their valid values.',
     inputSchema: { type: 'object' as const, properties: {} },
+  },
+  {
+    name: 'extract_html',
+    description: 'Convert existing HTML into a Tela document approximation.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        html: { type: 'string', description: 'Raw HTML to extract from' },
+      },
+      required: ['html'],
+    },
   },
 ];
 
@@ -405,47 +423,103 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'check': {
-        // Checker (Phase 5) — structural stubs return passing checks for now.
-        // Full implementation: src/checker/ with 11 rules.
-        const doc = store.getDocument(a['doc_id'] as string);
-        const checks: Array<{id: string; severity: string; rule: string; location: string; finding: string; fix: string}> = [];
+        const docId = a['doc_id'] as string;
+        const doc = store.getDocument(docId);
+        const renderResult = store.renderDocument(docId);
 
-        // Stub: scan for unfilled {{...}} placeholders in rendered HTML
-        const renderResult = store.renderDocument(a['doc_id'] as string);
-        const placeholders = [...renderResult.html.matchAll(/\{\{([^}]+)\}\}/g)];
-        for (const [, name] of placeholders) {
-          checks.push({
-            id: `unfilled-slots.${checks.length + 1}`,
-            severity: 'error',
-            rule: 'unfilled-slots',
-            location: 'document',
-            finding: `Unfilled placeholder: {{${name}}}`,
-            fix: `Replace {{${name}}} with actual content`,
-          });
-        }
+        const checkInput = {
+          html: renderResult.html,
+          document: doc.ast,
+          sectionIds: renderResult.sectionIds,
+        };
 
-        const score = checks.filter(c => c.severity === 'error').length === 0
-          ? (checks.filter(c => c.severity === 'warning').length === 0 ? 100 : 80)
-          : 50;
+        const report = runChecks(checkInput);
+
+        // Store the report for apply_fix to use later
+        lastCheckReports.set(docId, report);
+
+        // Serialize (patches Map is not JSON-serializable — omit it)
+        const serializable = {
+          score: report.score,
+          summary: report.summary,
+          checks: report.checks,
+          patchCount: report.patches.size,
+        };
 
         return {
-          content: [{ type: 'text', text: JSON.stringify({
-            score,
-            summary: checks.length === 0
-              ? 'No issues found.'
-              : `${checks.filter(c => c.severity === 'error').length} error(s), ${checks.filter(c => c.severity === 'warning').length} warning(s)`,
-            checks,
-            _note: 'Full checker (Phase 5) not yet implemented. Only unfilled-slots check is active.',
-          }) }],
+          content: [{ type: 'text', text: JSON.stringify(serializable) }],
         };
       }
 
       case 'apply_fix': {
-        // apply_fix (Phase 8) — not yet implemented
+        const fixId = a['fix_id'] as string;
+        const docId = a['doc_id'] as string;
+
+        const report = lastCheckReports.get(docId);
+        if (!report) {
+          return {
+            content: [{ type: 'text', text: JSON.stringify({
+              error: 'No check report found for this document. Run check() first.',
+              fix_id: fixId,
+            }) }],
+            isError: true,
+          };
+        }
+
+        const patch = report.patches.get(fixId);
+        if (!patch) {
+          return {
+            content: [{ type: 'text', text: JSON.stringify({
+              error: `No auto-applicable patch for fix_id "${fixId}". Apply this fix manually.`,
+              fix_id: fixId,
+            }) }],
+            isError: true,
+          };
+        }
+
+        // Apply the patch using updateBlock or a direct AST mutation
+        const doc = store.getDocument(docId);
+        const section = doc.ast.sections.find((s) => s.id === patch.sectionId);
+        if (!section) {
+          return {
+            content: [{ type: 'text', text: JSON.stringify({
+              error: `Section "${patch.sectionId}" not found.`,
+              fix_id: fixId,
+            }) }],
+            isError: true,
+          };
+        }
+
+        // Apply the patch operation
+        if (patch.op === 'set' && patch.path && patch.value !== undefined) {
+          store.updateBlock(docId, `${patch.sectionId}.${patch.path}`, {
+            [patch.path.split('.').pop()!]: patch.value,
+          });
+        } else if (patch.op === 'replace-modifier' || patch.op === 'add-modifier') {
+          // Modifier operations: mutate the section's block modifiers
+          const [modName] = patch.path.split('.');
+          const existingIdx = section.block.modifiers.findIndex((m) => m.name === modName);
+          const newMod = {
+            type: 'modifier' as const,
+            name: modName,
+            args: Array.isArray(patch.value) ? (patch.value as (string | number)[]) : [patch.value as string | number],
+            source: { line: 0, column: 0 },
+          };
+          if (existingIdx >= 0) {
+            section.block.modifiers[existingIdx] = newMod;
+          } else {
+            section.block.modifiers.push(newMod);
+          }
+        } else if (patch.op === 'remove-modifier') {
+          const [modName] = patch.path.split('.');
+          section.block.modifiers = section.block.modifiers.filter((m) => m.name !== modName);
+        }
+
         return {
           content: [{ type: 'text', text: JSON.stringify({
-            error: 'apply_fix not yet implemented (Phase 8). Use update_section() to apply fixes manually.',
-            fix_id: a['fix_id'],
+            applied: true,
+            fix_id: fixId,
+            section_id: patch.sectionId,
           }) }],
         };
       }
