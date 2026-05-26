@@ -136,7 +136,9 @@ function renderSection(section: CompiledSection, tree: ComponentTree, opts: Rend
     basePath: opts.basePath,
     sitePages: opts.sitePages,
   };
-  return renderBlock(section.block, ctx);
+  const html = renderBlock(section.block, ctx);
+  // Inject measurement hook into the root element (no extra DOM nodes)
+  return html.replace(/^(<[a-zA-Z][\w-]*)/, `$1 data-tela-id="${section.id}"`);
 }
 
 /**

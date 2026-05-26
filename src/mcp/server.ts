@@ -1,6 +1,6 @@
 /**
  * Tela MCP server.
- * Exposes 15 tools for creating, editing, rendering, and checking Tela documents.
+ * Exposes 16 tools for creating, editing, rendering, and checking Tela documents.
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -18,6 +18,8 @@ import { THEME_PRESETS, WARM_EDITORIAL } from '../tokens/presets.js';
 import { runChecks } from '../checker/index.js';
 import type { CheckReport, AstPatch } from '../checker/types.js';
 import { extract } from '../extractor/index.js';
+import { describeDocument } from '../renderer/describe.js';
+import type { SectionLayout } from '../renderer/types.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -229,6 +231,17 @@ const TOOLS = [
         html: { type: 'string', description: 'Raw HTML to extract from' },
       },
       required: ['html'],
+    },
+  },
+  {
+    name: 'describe',
+    description: 'Generate a compact text layout manifest from a rendered Tela document. Describes sections, their pixel positions/sizes (if available from a prior render), relative positions, and overlaps — so an LLM can understand the rendered result without a screenshot.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        doc_id: { type: 'string', description: 'Document ID' },
+      },
+      required: ['doc_id'],
     },
   },
   {
@@ -639,6 +652,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const extractionResult = extract(htmlInput);
         return {
           content: [{ type: 'text', text: JSON.stringify(extractionResult) }],
+        };
+      }
+
+      case 'describe': {
+        const docId = a['doc_id'] as string;
+        const doc = store.getDocument(docId);
+        const renderResult = store.renderDocument(docId);
+
+        // Try to load layout measurements saved by a prior render
+        const layoutPath = path.join(os.tmpdir(), 'tela', `${docId}-layout.json`);
+        let layout: SectionLayout[] | null = null;
+        try {
+          if (fs.existsSync(layoutPath)) {
+            layout = JSON.parse(fs.readFileSync(layoutPath, 'utf-8')) as SectionLayout[];
+          }
+        } catch { /* ignore */ }
+
+        const manifest = describeDocument(doc.ast, renderResult.sectionIds, layout);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ manifest }) }],
         };
       }
 

@@ -27,6 +27,8 @@ import { extract } from './extractor/index.js';
 import { listComponents } from './primitives/index.js';
 import { THEME_PRESETS } from './tokens/presets.js';
 import { THEME_NAMES } from './tokens/types.js';
+import { describeDocument } from './renderer/describe.js';
+import type { SectionLayout } from './renderer/types.js';
 
 // ─── Persistent store (restored from ~/.tela/sessions/) ──────────────────────
 
@@ -163,6 +165,7 @@ async function dispatch(tool: string, a: Args): Promise<unknown> {
       fs.writeFileSync(htmlPath, result.html, 'utf8');
 
       let screenshotPath: string | null = null;
+      let layoutData: SectionLayout[] | null = null;
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { default: puppeteer } = await import('puppeteer' as any) as any;
@@ -172,12 +175,32 @@ async function dispatch(tool: string, a: Args): Promise<unknown> {
         await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0' });
         screenshotPath = path.join(outDir, `${a['doc_id']}.png`);
         await page.screenshot({ path: screenshotPath, fullPage: true });
+        try {
+          layoutData = await page.evaluate(() =>
+            Array.from(document.querySelectorAll('[data-tela-id]')).map((el) => {
+              const r = el.getBoundingClientRect();
+              const cs = window.getComputedStyle(el);
+              return {
+                id: (el as HTMLElement).dataset.telaId ?? '',
+                x: Math.round(r.x),
+                y: Math.round(r.y),
+                w: Math.round(r.width),
+                h: Math.round(r.height),
+                position: cs.position,
+                zIndex: cs.zIndex,
+              };
+            })
+          ) as SectionLayout[];
+          // Save layout for use by the describe tool
+          const layoutPath = path.join(outDir, `${a['doc_id']}-layout.json`);
+          fs.writeFileSync(layoutPath, JSON.stringify(layoutData, null, 2), 'utf8');
+        } catch { /* ignore layout measurement errors */ }
         await browser.close();
       } catch {
         // puppeteer not available — skip screenshot
       }
 
-      return { html_path: htmlPath, screenshot_path: screenshotPath, section_ids: result.sectionIds };
+      return { html_path: htmlPath, screenshot_path: screenshotPath, section_ids: result.sectionIds, layout: layoutData };
     }
 
     case 'check': {
@@ -250,6 +273,24 @@ async function dispatch(tool: string, a: Args): Promise<unknown> {
       return extract(html);
     }
 
+    case 'describe': {
+      const docId = a['doc_id'] as string;
+      const doc = store.getDocument(docId);
+      const renderResult = store.renderDocument(docId);
+
+      // Try to get layout measurements from a saved layout file
+      const layoutPath = path.join(os.tmpdir(), 'tela', `${docId}-layout.json`);
+      let layout: SectionLayout[] | null = null;
+      try {
+        if (fs.existsSync(layoutPath)) {
+          layout = JSON.parse(fs.readFileSync(layoutPath, 'utf-8')) as SectionLayout[];
+        }
+      } catch { /* ignore */ }
+
+      const manifest = describeDocument(doc.ast, renderResult.sectionIds, layout);
+      return { manifest };
+    }
+
     default:
       throw new Error(`Unknown tool: ${tool}. Run with --help to see available tools.`);
   }
@@ -282,6 +323,7 @@ Tools:
   render            {"doc_id","out_dir?"}
   check             {"doc_id"}
   apply_fix         {"doc_id","fix_id"}
+  describe          {"doc_id"}
 
   list_components   {}
   list_themes       {}

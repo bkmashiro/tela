@@ -45,6 +45,16 @@ export interface RenderCache {
   tokenHash: string;
 }
 
+export interface SectionLayout {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  position: string;  // 'static' | 'sticky' | 'fixed' | 'absolute' | 'relative'
+  zIndex: string;    // e.g. '100' or 'auto'
+}
+
 export interface RenderResult {
   html: string;
   /** Paths of sections that were re-rendered (not from cache). */

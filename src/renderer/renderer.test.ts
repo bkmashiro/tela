@@ -4,6 +4,8 @@
 
 import { parse } from '../parser/index.js';
 import { compile, render, makeEmptyCache } from './index.js';
+import { describeDocument } from './describe.js';
+import type { SectionLayout } from './types.js';
 
 const SIMPLE_DOC = `---
 theme: warm-editorial
@@ -75,6 +77,13 @@ describe('render', () => {
     const tree = compile(doc);
     const { html } = render(tree);
     expect(html).toContain('<!-- Section: section-0 -->');
+  });
+
+  it('injects data-tela-id into section root elements', () => {
+    const doc = parse(SIMPLE_DOC);
+    const tree = compile(doc);
+    const { html } = render(tree);
+    expect(html).toContain('data-tela-id="section-0"');
   });
 
   it('renders a nav section', () => {
@@ -167,5 +176,98 @@ describe('render - component types', () => {
     const html = renderComponent(`cta:\n  headline: Get started\n  body: Join us today.\n`);
     expect(html).toContain('tela-cta');
     expect(html).toContain('Get started');
+  });
+});
+
+describe('describeDocument', () => {
+  const DOC_SRC = `---
+theme: warm-editorial
+mode: landing
+lang: en
+title: Test Page
+---
+
+nav:
+  brand: Acme
+
+---
+
+hero | pad(xl) centered:
+  headline: Hello World
+  body: Welcome to Tela.
+
+---
+
+footer:
+  copyright: "© 2026 Acme"
+`;
+
+  it('generates a manifest with header and section entries', () => {
+    const doc = parse(DOC_SRC);
+    const sectionIds = doc.sections.map(s => s.id);
+    const manifest = describeDocument(doc, sectionIds, null);
+
+    expect(manifest).toContain('doc: "Test Page"');
+    expect(manifest).toContain('theme: warm-editorial');
+    expect(manifest).toContain('mode: landing');
+    expect(manifest).toContain('§1 nav');
+    expect(manifest).toContain('§2 hero');
+    expect(manifest).toContain('§3 footer');
+  });
+
+  it('includes modifiers in section lines', () => {
+    const doc = parse(DOC_SRC);
+    const sectionIds = doc.sections.map(s => s.id);
+    const manifest = describeDocument(doc, sectionIds, null);
+
+    expect(manifest).toContain('[pad(xl) centered]');
+  });
+
+  it('includes property values', () => {
+    const doc = parse(DOC_SRC);
+    const sectionIds = doc.sections.map(s => s.id);
+    const manifest = describeDocument(doc, sectionIds, null);
+
+    expect(manifest).toContain('headline: "Hello World"');
+    expect(manifest).toContain('brand: "Acme"');
+  });
+
+  it('omits viewport info when no layout is provided', () => {
+    const doc = parse(DOC_SRC);
+    const sectionIds = doc.sections.map(s => s.id);
+    const manifest = describeDocument(doc, sectionIds, null);
+
+    expect(manifest).not.toContain('viewport:');
+  });
+
+  it('includes pixel measurements and viewport info when layout is provided', () => {
+    const doc = parse(DOC_SRC);
+    const sectionIds = doc.sections.map(s => s.id);
+    const layout: SectionLayout[] = [
+      { id: sectionIds[0], x: 0, y: 0, w: 1440, h: 60, position: 'static', zIndex: 'auto' },
+      { id: sectionIds[1], x: 0, y: 60, w: 1440, h: 600, position: 'static', zIndex: 'auto' },
+      { id: sectionIds[2], x: 0, y: 660, w: 1440, h: 120, position: 'static', zIndex: 'auto' },
+    ];
+    const manifest = describeDocument(doc, sectionIds, layout);
+
+    // New format: size buckets + fold labels, no raw y= values
+    expect(manifest).toContain('strip');       // nav h=60 → strip bucket
+    expect(manifest).toContain('above-fold');  // both sections visible
+    expect(manifest).toContain('viewport: 1440×900');
+    expect(manifest).toContain('overlap: none');
+  });
+
+  it('reports sticky/fixed elements as overlaps', () => {
+    const doc = parse(DOC_SRC);
+    const sectionIds = doc.sections.map(s => s.id);
+    const layout: SectionLayout[] = [
+      { id: sectionIds[0], x: 0, y: 0, w: 1440, h: 60, position: 'sticky', zIndex: '100' },
+      { id: sectionIds[1], x: 0, y: 60, w: 1440, h: 600, position: 'static', zIndex: 'auto' },
+      { id: sectionIds[2], x: 0, y: 660, w: 1440, h: 120, position: 'static', zIndex: 'auto' },
+    ];
+    const manifest = describeDocument(doc, sectionIds, layout);
+
+    expect(manifest).toContain('[sticky]');
+    expect(manifest).toContain('overlap: §1(sticky) covers');
   });
 });
