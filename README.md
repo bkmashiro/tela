@@ -1,48 +1,58 @@
 # Tela
 
-**LLM-native HTML page composer — layout primitives, interactive components, multi-page sites.**
-
-LLMs describe pages using composable primitives. Tela renders them to production HTML, validates aesthetics, and feeds back structured guidance so the LLM can iterate.
-
-```
-create_document() → add_section() × N → render() → check() → update_section() → render()
-```
-
----
-
-## Examples
-
-Five examples across themes and modes:
+**LLM-native HTML page composer.** Describe layout with composable primitives, render to production HTML, validate aesthetics, iterate.
 
 | warm-editorial | cool-technical | dark-dramatic |
 |:-:|:-:|:-:|
 | ![warm-editorial](docs/assets/theme-warm-editorial.png) | ![cool-technical](docs/assets/theme-cool-technical.png) | ![dark-dramatic](docs/assets/theme-dark-dramatic.png) |
-| Parchment · Serif · Editorial | White · Slate · Developer | Dark · High contrast · Bold |
 
-| article (warm-editorial) | dashboard + charts (dark-dramatic) |
-|:-:|:-:|
-| ![article](docs/assets/theme-article-warm-editorial.png) | ![dashboard](docs/assets/theme-dashboard-dark-dramatic.png) |
-| Long-form editorial with prose, figure, pull-quote | Sticky nav · bar/line charts · stat cards |
-
-| docs layout (cool-technical) |
-|:-:|
-| ![docs](docs/assets/theme-docs-cool-technical.png) |
-| Two-column sticky sidebar · docs mode |
+| article (warm-editorial) | dashboard + charts (dark-dramatic) | docs layout (cool-technical) |
+|:-:|:-:|:-:|
+| ![article](docs/assets/theme-article-warm-editorial.png) | ![dashboard](docs/assets/theme-dashboard-dark-dramatic.png) | ![docs](docs/assets/theme-docs-cool-technical.png) |
 
 ---
 
-## How it works
+## Quickstart (CLI)
 
-Instead of writing HTML or CSS, an LLM declares intent using Tela's notation — typed sections with modifier chains. Tela handles the translation, validates the result against aesthetic rules, and returns machine-readable feedback the LLM can act on immediately.
+```bash
+npm install && npm run build
+
+# Create a document and add sections
+node dist/tela-call.js create_document '{"theme":"warm-editorial","mode":"landing"}'
+# → "doc-001"
+
+node dist/tela-call.js add_section '{
+  "doc_id": "doc-001",
+  "tela_fragment": "hero | split(60/40) pad(xl):\n  left:\n    headline: Hello World\n    body: Welcome to Tela.\n    cta:\n      - label: Get started | role(primary)\n  right:\n    figure: https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800 | aspect(4/3) rounded shadow(lg)"
+}'
+
+node dist/tela-call.js render '{"doc_id":"doc-001","out_dir":"/tmp/tela"}'
+# → {html_path, screenshot_path, section_ids, layout}
+
+node dist/tela-call.js describe '{"doc_id":"doc-001"}'
+# → compact text manifest: sections, fold positions, overlaps
+
+node dist/tela-call.js check '{"doc_id":"doc-001"}'
+# → {score, summary, checks[]}
+
+node dist/tela-call.js apply_fix '{"doc_id":"doc-001","fix_id":"spacing-rhythm.001"}'
+```
+
+---
+
+## .tela notation
+
+`---` separates sections. `type | mod1 mod2(arg):` declares a block. Indentation = child structure.
 
 ````
 ---
 theme: warm-editorial
 mode: landing
+title: My Page
 ---
 
 nav | sticky:
-  logo: Tela
+  logo: Brand
   links:
     - label: Features | href(#features)
     - label: Docs     | href(/docs)
@@ -65,7 +75,7 @@ hero | split(60/40) pad(xl):
 
 ---
 
-features | grid(3) gap(lg):
+features | grid(3) gap(lg) pad(xl):
   - icon: ◆ | accent
     title: Composable
     body: 30+ primitives. Combine freely.
@@ -83,7 +93,7 @@ tabs | pad(lg):
     - title: Overview
       body: Tela renders layout intent to production HTML. No CSS. No templates.
     - title: API
-      body: 16 MCP tools. create_document, add_section, render, check — all callable from any MCP client.
+      body: 26 MCP tools. create_document, add_section, render, check — callable from any MCP client.
     - title: Themes
       body: warm-editorial, cool-technical, neutral-minimal, dark-dramatic.
 
@@ -100,17 +110,10 @@ accordion | pad(md):
 
 cta | centered pad(xl):
   headline: Ready to build?
-  body: Join the beta. No credit card required.
+  body: Start composing.
   cta:
     - label: Get early access | role(primary)
 ````
-
-**Syntax:**
-- `---` separates sections (also wraps frontmatter)
-- `type | mod1 mod2(arg):` declares a block with modifiers
-- `mod(arg)` = modifier with argument; `mod` = boolean flag
-- Indentation expresses child structure (YAML semantics)
-- `#` for comments
 
 ---
 
@@ -120,8 +123,8 @@ cta | centered pad(xl):
 
 | Primitive | Description |
 |-----------|-------------|
-| `hero` | Page header with headline, body, CTA — supports `split(60/40)` layout |
-| `features` | Grid of feature cards |
+| `hero` | Page header — headline, body, CTA. Supports `split(60/40)` layout |
+| `features` | Grid of feature cards with icon, title, body |
 | `quote` | Pull quote or blockquote |
 | `testimonial` | Customer quote with attribution |
 | `prose` | Single-column reading view |
@@ -130,20 +133,18 @@ cta | centered pad(xl):
 | `cta` | Call-to-action band |
 | `aside` | Callout / info box |
 | `divider` | Horizontal rule |
-| `nav` | Navigation bar — sticky, responsive, hamburger menu |
+| `nav` | Navigation bar — sticky, responsive |
 | `footer` | Page footer with links |
 
-### Interactive components
-
-Zero dependencies — all interactivity is inline vanilla JS + scoped CSS.
+### Interactive (zero dependencies)
 
 | Primitive | Description |
 |-----------|-------------|
-| `tabs` | Tabbed content, ARIA-compliant, vanilla JS click handler |
-| `accordion` | Collapsible FAQ using `<details>`/`<summary>` — works without JS |
-| `modal` | Dialog overlay via native `<dialog>` + `showModal()` |
-| `toggle` | Styled checkbox toggle, animates via CSS |
-| `chart` | Chart.js opt-in — bar, line, pie, doughnut — single or multi-dataset |
+| `tabs` | Tabbed content, ARIA-compliant |
+| `accordion` | Collapsible FAQ using `<details>`/`<summary>` |
+| `modal` | Dialog overlay via native `<dialog>` |
+| `toggle` | Styled checkbox toggle |
+| `chart` | Chart.js — bar, line, pie, doughnut — inlined for offline/headless use |
 
 ### Layout containers
 
@@ -153,17 +154,81 @@ Zero dependencies — all interactivity is inline vanilla JS + scoped CSS.
 | `split` | Horizontal split with configurable ratio |
 | `grid(n)` | n-column CSS grid |
 | `centered` | Horizontally centered container |
-| `docspage` | Two-column sticky-sidebar docs layout — sidebar nav + scrollable main content |
+| `docspage` | Two-column sticky-sidebar docs layout |
 
-### Modifiers
+### chart example
 
-`pad(xs|sm|md|lg|xl|section)` · `gap(xs|sm|md|lg|xl)` · `bg(token)` · `rounded` · `shadow(sm|md|lg)` · `bleed` · `aspect(w/h)` · `accent` · `muted` · `inverted` · `sticky` · `centered` · `split(n/m)` · `grid(n)` · `role(primary|ghost|danger)` · `href(url)` · `trigger("label")` · `label("text")`
+```
+chart | type(bar) pad(lg):
+  title: Monthly Revenue ($k)
+  labels: Jan, Feb, Mar, Apr, May, Jun
+  datasets:
+    - label: 2024
+      data: 42, 58, 71, 65, 89, 95
+      color: secondary
+    - label: 2025
+      data: 55, 70, 88, 94, 112, 130
+      color: accent
+```
+
+`type`: bar | line | pie | doughnut
+
+### docspage example
+
+```
+docspage | pad(lg):
+  sidebar:
+    title: Documentation
+    links:
+      - label: Getting Started | href(/docs/start)
+      - label: API Reference   | href(/docs/api)
+  content:
+    - prose:
+        body: Main content here.
+```
 
 ---
 
-## Design Tokens
+## Modifiers
 
-All visual decisions flow through a semantic token tree — no raw CSS values in notation:
+| Modifier | Values |
+|----------|--------|
+| `pad` | xs sm md lg xl section |
+| `gap` | xs sm md lg xl |
+| `bg` | surface.default · elevated · inverted · warm |
+| `shadow` | sm md lg |
+| `aspect` | 1/1 · 4/3 · 16/9 · 3/2 |
+| `split` | 50/50 · 60/40 · 40/60 · 70/30 |
+| `grid` | 2 · 3 · 4 |
+| `role` | primary · ghost · danger |
+| `rounded` `sticky` `bleed` `accent` `muted` `inverted` `centered` | boolean flags |
+
+---
+
+## Themes
+
+| Theme | Character |
+|-------|-----------|
+| `warm-editorial` | Parchment background · ink-blue accent · serif headlines |
+| `cool-technical` | White · slate accent · monospace emphasis |
+| `neutral-minimal` | Gray scale only · maximum whitespace |
+| `dark-dramatic` | Deep background · high contrast · bright orange accent |
+
+**Override:** `theme: warm-editorial + color.accent.default=#C84B31`
+
+---
+
+## Safe unicode icons
+
+Confirmed cross-platform without an icon library — use for `icon:`:
+
+`◆ ◇ ◉ ◊ ✓ ★ ☆ ● ○ ▲ △ ▶ → ⊕ ⊗`
+
+**Avoid:** ◈ ✦ ✧ ✔ ⬡ ⬟ — tofu in headless Linux environments.
+
+---
+
+## Design tokens
 
 ```
 color.surface.default / elevated / warm / inverted
@@ -180,103 +245,115 @@ elevation.flat / raised / floating
 radius.sm=4 / md=8 / lg=16 / xl=24 / pill=999
 ```
 
-**Four built-in themes:**
+---
 
-| Theme | Character |
-|-------|-----------|
-| `warm-editorial` | Parchment background, ink-blue accent, serif headline |
-| `cool-technical` | White, slate accent, monospace emphasis |
-| `neutral-minimal` | Gray scale only, maximum whitespace |
-| `dark-dramatic` | Deep background, high contrast, bright accent |
+## All CLI tools
 
-**Override syntax:**
-```yaml
-theme: warm-editorial + color.accent.default=#C84B31
+```bash
+# Document lifecycle
+node dist/tela-call.js create_document   '{"theme":"warm-editorial","mode":"landing","lang":"en"}'
+node dist/tela-call.js open_document     '{"path":"./page.tela"}'
+node dist/tela-call.js save_document     '{"doc_id":"doc-001","path":"./page.tela"}'
+node dist/tela-call.js list_documents    '{}'
+node dist/tela-call.js undo              '{"doc_id":"doc-001"}'
+
+# Section editing
+node dist/tela-call.js add_section       '{"doc_id":"doc-001","tela_fragment":"hero | pad(xl):\n  headline: Hi"}'
+node dist/tela-call.js update_section    '{"doc_id":"doc-001","section_id":"section-1","tela_fragment":"..."}'
+node dist/tela-call.js remove_section    '{"doc_id":"doc-001","section_id":"section-1"}'
+node dist/tela-call.js reorder_sections  '{"doc_id":"doc-001","section_ids":["section-2","section-0","section-1"]}'
+node dist/tela-call.js get_section       '{"doc_id":"doc-001","section_id":"section-1"}'
+node dist/tela-call.js set_theme         '{"doc_id":"doc-001","theme_spec":"dark-dramatic"}'
+node dist/tela-call.js update_block      '{"doc_id":"doc-001","path":"section-1.headline","props":{"headline":"New Title"}}'
+
+# Render + feedback
+node dist/tela-call.js render            '{"doc_id":"doc-001","out_dir":"/tmp/tela"}'
+node dist/tela-call.js describe          '{"doc_id":"doc-001"}'
+node dist/tela-call.js check             '{"doc_id":"doc-001"}'
+node dist/tela-call.js apply_fix         '{"doc_id":"doc-001","fix_id":"spacing-rhythm.001"}'
+
+# Discovery
+node dist/tela-call.js list_components   '{}'
+node dist/tela-call.js list_themes       '{}'
+node dist/tela-call.js list_modifiers    '{}'
+node dist/tela-call.js extract_html      '{"html":"<html>...</html>"}'
+
+# Multi-page sites
+node dist/tela-call.js create_site       '{"name":"My Site","theme":"warm-editorial"}'
+node dist/tela-call.js add_page          '{"site_id":"site-001","slug":"index","doc_id":"doc-001"}'
+node dist/tela-call.js remove_page       '{"site_id":"site-001","slug":"index"}'
+node dist/tela-call.js render_site       '{"site_id":"site-001","out_dir":"./dist"}'
+node dist/tela-call.js list_pages        '{"site_id":"site-001"}'
+node dist/tela-call.js list_sites        '{}'
 ```
 
 ---
 
-## Multi-page Sites
+## describe manifest
 
-Group documents into a named site and render them together with correct cross-page link resolution:
+`describe` returns a compact text manifest — semantic layout description without needing a screenshot:
 
 ```
-create_site("My Site", theme="warm-editorial")   → site_id
-add_page(site_id, slug="index",   doc_id=home_doc)
-add_page(site_id, slug="docs",    doc_id=docs_doc)
-add_page(site_id, slug="about",   doc_id=about_doc)
-render_site(site_id, out_dir="./dist")
+doc: "Analytics Dashboard"  theme: dark-dramatic  mode: landing  lang: en
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+§1 nav  [sticky inverted]  strip  above-fold  [sticky]
+   logo: "Analytics"
+
+§2 hero  [centered pad(lg) inverted]  full  above-fold
+   headline: "Q2 2025 Dashboard"
+   body: "Key metrics and trends for the quarter."
+
+§3 chart/bar  [pad(lg)]  large  straddles-fold(top 43% visible)
+   title: "Monthly Revenue ($k)"
+   labels: "Jan, Feb, Mar, Apr, May, Jun"
+
+§4 chart/line  [pad(lg)]  large  below-fold
+   title: "User Growth"
+
+§5 features  [grid(3) gap(lg) pad(lg)]  medium  below-fold
+
+viewport: 1440×900  |  page-height: ≈1750px
+overlap: §1(sticky) covers §2–§5 — top 48px of each
 ```
 
-Output structure:
+**Size buckets:** `strip`(<80px) · `compact`(80–250px) · `medium`(250–450px) · `large`(450–700px) · `full`(>700px)  
+**Fold labels:** `above-fold` · `straddles-fold(top N% visible)` · `below-fold`
+
+Layout data is populated automatically after `render` when Puppeteer is available; degrades to AST-only manifest otherwise.
+
+---
+
+## Multi-page sites
+
+```bash
+node dist/tela-call.js create_site '{"name":"My Site","theme":"warm-editorial"}'   # → "site-001"
+node dist/tela-call.js add_page '{"site_id":"site-001","slug":"index","doc_id":"doc-001"}'
+node dist/tela-call.js add_page '{"site_id":"site-001","slug":"docs","doc_id":"doc-002"}'
+node dist/tela-call.js render_site '{"site_id":"site-001","out_dir":"./dist"}'
+```
+
+Output:
 ```
 dist/
-  index.html          ← slug "index"
-  docs/index.html     ← slug "docs"
-  about/index.html    ← slug "about"
+  index.html
+  docs/index.html
 ```
 
-Site-relative links (`href(/docs)`) resolve automatically relative to each page's location.
+`href(/docs)` links resolve automatically relative to each page's location.
 
 ---
 
-## MCP Server
+## MCP server
 
-Tela runs as an MCP server. Connect any MCP client and use tools to create, edit, render, and check documents in a stateful session with full undo history.
-
-**Document lifecycle:**
-```
-create_document(theme?, mode?, lang?)   → doc_id
-open_document(path)                     → doc_id
-save_document(doc_id, path?)            → saved_path
-list_documents()                        → [{id, mode, section_count}]
-undo(doc_id)                            → restored snapshot
+```bash
+node dist/mcp/server.js
 ```
 
-**Section editing:**
-```
-add_section(doc_id, tela_fragment, position?)
-update_section(doc_id, section_id, tela_fragment)
-remove_section(doc_id, section_id)
-reorder_sections(doc_id, section_ids[])
-set_theme(doc_id, theme_spec)
-```
-
-**Fine-grained editing:**
-```
-get_section(doc_id, section_id)           → annotated tela fragment
-update_block(doc_id, path, props)         # path: "hero.left.cta[0].label"
-```
-
-**Multi-page sites:**
-```
-create_site(name, theme?)               → site_id
-add_page(site_id, slug, doc_id)
-remove_page(site_id, slug)
-render_site(site_id, out_dir)           → {outputDir, pages[]}
-list_pages(site_id)                     → [{slug, docId}]
-list_sites()                            → [{id, name, pages[]}]
-```
-
-**Render + check loop:**
-```
-render(doc_id)                → {html_path, screenshot_path}
-check(doc_id)                 → CheckReport JSON
-apply_fix(doc_id, fix_id)     → auto-apply checker suggestion
-```
-
-**Discovery:**
-```
-list_components()             → block registry + example tela
-list_themes()                 → theme presets
-list_modifiers()              → modifier vocabulary + valid values
-```
+Connect any MCP client (Claude Desktop, Cursor, Zed). 26 tools — full session state, undo history.
 
 ---
 
 ## Checker
-
-Feedback reads like design guidance, not lint output. Every finding includes a concrete fix the LLM (or `apply_fix`) can act on immediately.
 
 ```json
 {
@@ -290,39 +367,12 @@ Feedback reads like design guidance, not lint output. Every finding includes a c
       "location": "section[1].grid",
       "finding": "gap(16px) conflicts with base unit (24px). Creates visual dissonance.",
       "fix": "Change gap modifier to lg or xl"
-    },
-    {
-      "id": "focal-points.001",
-      "severity": "warning",
-      "rule": "focal-points",
-      "location": "section[0].hero",
-      "finding": "3 elements compete for primary attention: headline, figure, dual-CTA.",
-      "fix": "Remove ghost CTA from hero; place in a dedicated section below"
     }
   ]
 }
 ```
 
-**11 check rules:** `unfilled-slots` · `heading-order` · `alt-text` · `line-length` · `type-scale` · `text-contrast` · `spacing-rhythm` · `whitespace-balance` · `focal-points` · `cta-placement` · `grid-consistency`
-
----
-
-## Typical LLM Workflow
-
-```
-list_components()
-create_document(theme="warm-editorial", mode="landing")
-add_section(doc, "nav | sticky: ...")
-add_section(doc, "hero | split(60/40) pad(xl): ...")
-add_section(doc, "features | grid(3) gap(lg): ...")
-add_section(doc, "tabs | pad(lg): ...")
-add_section(doc, "cta | centered pad(xl): ...")
-render(doc)                # → {html_path, screenshot_path}
-check(doc)                 # → CheckReport
-apply_fix(doc, "spacing-rhythm.001")
-render(doc)                # → updated screenshot
-save_document(doc, "./landing.tela")
-```
+**11 rules:** `unfilled-slots` · `heading-order` · `alt-text` · `line-length` · `type-scale` · `text-contrast` · `spacing-rhythm` · `whitespace-balance` · `focal-points` · `cta-placement` · `grid-consistency`
 
 ---
 
@@ -330,15 +380,16 @@ save_document(doc, "./landing.tela")
 
 ```
 src/
-  ast/          # TypeScript AST type definitions
-  parser/       # .tela notation → AST
-  tokens/       # token resolution + 4 theme presets
-  renderer/     # AST → HTML+CSS (section-granular, incremental)
-  primitives/   # built-in block library (17 components)
-  checker/      # CheckReport engine (11 rules)
-  extractor/    # existing HTML → .tela approximation
-  mcp/          # DocumentStore + SiteStore + MCP server (22 tools)
-  cli/          # tela render / check / extract
+  ast/          TypeScript AST type definitions
+  parser/       .tela notation → AST
+  tokens/       token resolution + 4 theme presets
+  renderer/     AST → HTML+CSS (incremental, section-granular)
+                describe.ts — semantic layout manifest for LLM feedback
+  primitives/   30+ built-in components
+  checker/      CheckReport engine (11 rules)
+  extractor/    existing HTML → .tela approximation
+  mcp/          DocumentStore + SiteStore + MCP server (26 tools)
+  cli/          tela render / check / extract
 ```
 
 ---
@@ -347,22 +398,20 @@ src/
 
 | Phase | Package | Status |
 |-------|---------|--------|
-| 0 | `ast` — typed AST definitions | ✅ complete |
-| 1 | `tokens` — token system, 4 theme presets | ✅ complete |
-| 2 | `parser` — .tela → AST | ✅ complete |
-| 3 | `renderer` — AST → HTML+CSS, incremental | ✅ complete |
-| 4 | `primitives` — 17 built-in components | ✅ complete |
-| 4 | `mcp` — DocumentStore + SiteStore, 22 tools, history/undo | ✅ complete |
-| 4 | `interactive` — tabs, accordion, modal, toggle | ✅ complete |
-| 5 | `checker` — CheckReport, 11 rules, fix patches | 🔜 next |
-| 6 | Screenshot — Puppeteer integration | 🔜 next |
-| 7 | `extractor` — HTML → .tela | 🔜 next |
-| 8 | `apply_fix` — auto-patch from fix_id | 🔜 next |
+| 0 | `ast` — typed AST definitions | ✅ |
+| 1 | `tokens` — token system, 4 themes | ✅ |
+| 2 | `parser` — .tela → AST | ✅ |
+| 3 | `renderer` — AST → HTML+CSS, incremental | ✅ |
+| 4 | `primitives` — 30+ components | ✅ |
+| 4 | `mcp` — 26 tools, DocumentStore, SiteStore, undo | ✅ |
+| 4 | `interactive` — tabs, accordion, modal, toggle, chart | ✅ |
+| 4 | `describe` — semantic layout manifest | ✅ |
+| 5 | `checker` — 11 rules, fix patches | ✅ |
+| 6 | Screenshot + layout measurement — Puppeteer integration | ✅ |
+| 7 | `extractor` — HTML → .tela | ✅ |
 
-**103 tests passing. Zero TypeScript errors.**
+**110 tests passing. Zero TypeScript errors.**
 
 ---
-
-## License
 
 MIT
