@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+      - name: Package
+        run: |
+          mkdir -p release
+          # Include dist, package.json, README (users only need these + node_modules)
+          cp -r dist release/
+          cp package.json release/
+          cp README.md release/
+          # Minimal node_modules (only production deps)
+          npm ci --omit=dev --prefix release
+          cd release && zip -r ../tela-${{ github.ref_name }}.zip . && cd ..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tela-${{ github.ref_name }}.zip
+          generate_release_notes: true
+          body: |
+            ## Install
+
+            ```bash
+            unzip tela-${{ github.ref_name }}.zip -d tela
+            cd tela
+            node dist/mcp/server.js   # MCP server
+            ```
+
+            Add to your MCP client config:
+
+            ```json
+            {
+              "mcpServers": {
+                "tela": {
+                  "command": "node",
+                  "args": ["/path/to/tela/dist/mcp/server.js"]
+                }
+              }
+            }
+            ```
