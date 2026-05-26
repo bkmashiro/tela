@@ -20,6 +20,7 @@ import path from 'node:path';
 import os from 'node:os';
 
 import { DocumentStore } from './mcp/store.js';
+import { ensureChartJs } from './renderer/assets.js';
 import { runChecks } from './checker/index.js';
 import type { CheckReport } from './checker/types.js';
 import { extract } from './extractor/index.js';
@@ -150,7 +151,12 @@ async function dispatch(tool: string, a: Args): Promise<unknown> {
     }
 
     case 'render': {
-      const result = store.renderDocument(a['doc_id'] as string);
+      const _telaCallDocId = a['doc_id'] as string;
+      const _telaCallDoc = store.getDocument(_telaCallDocId);
+      if (_telaCallDoc.ast.sections.some(s => s.block.blockType === 'chart')) {
+        try { await ensureChartJs(); } catch { /* network unavailable — will use CDN fallback */ }
+      }
+      const result = store.renderDocument(_telaCallDocId);
       const outDir = (a['out_dir'] as string | undefined) ?? path.join(os.tmpdir(), 'tela');
       fs.mkdirSync(outDir, { recursive: true });
       const htmlPath = path.join(outDir, `${a['doc_id']}.html`);

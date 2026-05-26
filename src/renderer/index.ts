@@ -22,6 +22,10 @@ import { makeEmptyCache } from './types.js';
 import { generateFontLinks } from './fonts.js';
 import { esc } from './helpers.js';
 import { COMPONENT_REGISTRY } from '../primitives/index.js';
+import { getChartJsSync } from './assets.js';
+
+const CHARTJS_PLACEHOLDER = '<!-- __TELA_CHARTJS__ -->';
+const CHARTJS_CDN = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js';
 
 export { makeEmptyCache };
 export type { ComponentTree, RenderCache, RenderResult, CompiledSection };
@@ -95,6 +99,22 @@ export function render(
   const fontLinks = generateFontLinks(tree.tokens.values);
   const { frontmatter } = tree;
 
+  let bodyContent = sectionHtmlParts.join('\n\n');
+
+  // Resolve Chart.js placeholders — inline cached source or fall back to CDN
+  if (bodyContent.includes(CHARTJS_PLACEHOLDER)) {
+    const chartJsSrc = getChartJsSync();
+    const chartJsTag = chartJsSrc
+      ? `<script>${chartJsSrc}</script>`
+      : `<script src="${CHARTJS_CDN}"></script>`;
+    // Replace first occurrence with the real script, remove the rest
+    let first = true;
+    bodyContent = bodyContent.replace(new RegExp(CHARTJS_PLACEHOLDER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), () => {
+      if (first) { first = false; return chartJsTag; }
+      return '';
+    });
+  }
+
   const html = buildDocument({
     title: frontmatter.title ?? 'Untitled',
     description: frontmatter.description,
@@ -102,7 +122,7 @@ export function render(
     tokensCSS,
     fontLinks,
     mode: frontmatter.mode,
-    bodyContent: sectionHtmlParts.join('\n\n'),
+    bodyContent,
   });
 
   return { html, renderedSections };

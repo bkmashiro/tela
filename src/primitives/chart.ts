@@ -6,34 +6,47 @@ import type { RenderContext } from '../renderer/types.js';
 import {
   T, esc, style, getModArg, spaceToken, resolveString, getArrayItems,
 } from '../renderer/helpers.js';
+import type { ResolvedTokens } from '../tokens/types.js';
 
-const DEFAULT_COLORS = [
-  'var(--t-accent-default)',
+// Fallback palette for when token values aren't available
+const FALLBACK_COLORS = [
+  '#4f8ef7',
   'rgba(99,102,241,0.8)',
   'rgba(16,185,129,0.8)',
   'rgba(245,158,11,0.8)',
   'rgba(239,68,68,0.8)',
 ];
 
-function resolveColor(color: string): string {
-  if (color === 'accent') return 'var(--t-accent-default)';
-  if (color === 'secondary') return 'var(--t-text-secondary)';
+/** Resolve a color name to a concrete CSS color value (no CSS vars — canvas can't use them). */
+function resolveColor(color: string, tokens: ResolvedTokens): string {
+  if (color === 'accent') return tokens.values['--t-accent-default'] ?? FALLBACK_COLORS[0];
+  if (color === 'secondary') return tokens.values['--t-text-secondary'] ?? FALLBACK_COLORS[1];
+  if (color === 'primary') return tokens.values['--t-text-primary'] ?? FALLBACK_COLORS[2];
+  // CSS var reference — try to resolve it
+  if (color.startsWith('var(--t-')) {
+    const key = color.slice(4, -1); // strip 'var(' and ')'
+    return tokens.values[key] ?? FALLBACK_COLORS[0];
+  }
   return color;
 }
 
-function toColorBg(color: string): string {
-  const c = resolveColor(color);
-  // If it's already a CSS var or rgba, use as-is
-  if (c.startsWith('var(') || c.startsWith('rgba(')) return c;
-  // For hex or rgb, add some opacity for background
-  return c;
+function getDefaultColors(tokens: ResolvedTokens): string[] {
+  return [
+    tokens.values['--t-accent-default'] ?? FALLBACK_COLORS[0],
+    tokens.values['--t-accent-shade'] ?? FALLBACK_COLORS[1],
+    'rgba(16,185,129,0.85)',
+    'rgba(245,158,11,0.85)',
+    'rgba(239,68,68,0.85)',
+  ];
 }
 
+
 export function renderChart(ctx: RenderContext): string {
-  const { section } = ctx;
+  const { section, tokens } = ctx;
   const { block } = section;
   const { properties, modifiers } = block;
   const sectionId = esc(section.id);
+  const defaultColors = getDefaultColors(tokens);
 
   const padSize = getModArg(modifiers, 'pad', 'section');
   const bgToken = getModArg(modifiers, 'bg', '');
@@ -78,22 +91,25 @@ export function renderChart(ctx: RenderContext): string {
       const nums = dataStr.split(',').map((s) => parseFloat(s.trim())).filter((n) => !isNaN(n));
 
       const color = colorStr
-        ? resolveColor(colorStr)
-        : DEFAULT_COLORS[i % DEFAULT_COLORS.length];
+        ? resolveColor(colorStr, tokens)
+        : defaultColors[i % defaultColors.length];
 
       if (isPieOrDoughnut) {
-        const bgColors = JSON.stringify(DEFAULT_COLORS);
         datasets.push(`{
           label: ${JSON.stringify(label)},
           data: ${JSON.stringify(nums)},
-          backgroundColor: ${bgColors},
+          backgroundColor: ${JSON.stringify(defaultColors)},
           borderWidth: 2
         }`);
       } else {
+        // Make background slightly transparent
+        const bgColor = color.startsWith('#')
+          ? color + 'aa'  // hex + alpha
+          : color.replace(/,\s*[\d.]+\)$/, ', 0.6)').replace(/^(rgb\()/, 'rgba(');
         datasets.push(`{
           label: ${JSON.stringify(label)},
           data: ${JSON.stringify(nums)},
-          backgroundColor: ${JSON.stringify(color.replace(/rgba\((\d+,\d+,\d+),[\d.]+\)/, 'rgba($1,0.6)') || color)},
+          backgroundColor: ${JSON.stringify(bgColor)},
           borderColor: ${JSON.stringify(color)},
           borderWidth: 2${chartType === 'line' ? ',\n          tension: 0.3,\n          fill: false' : ''}
         }`);
@@ -105,20 +121,21 @@ export function renderChart(ctx: RenderContext): string {
     // Single-dataset shorthand
     const dataStr = resolveString(dataVal);
     const nums = dataStr.split(',').map((s) => parseFloat(s.trim())).filter((n) => !isNaN(n));
-    const color = DEFAULT_COLORS[0];
+    const color = defaultColors[0];
+    const bgColor = color.startsWith('#') ? color + 'aa' : color.replace(/,\s*[\d.]+\)$/, ', 0.6)').replace(/^(rgb\()/, 'rgba(');
 
     if (isPieOrDoughnut) {
       datasetsJs = `[{
           label: '',
           data: ${JSON.stringify(nums)},
-          backgroundColor: ${JSON.stringify(DEFAULT_COLORS)},
+          backgroundColor: ${JSON.stringify(defaultColors)},
           borderWidth: 2
         }]`;
     } else {
       datasetsJs = `[{
           label: '',
           data: ${JSON.stringify(nums)},
-          backgroundColor: ${JSON.stringify(color.replace(/rgba\((\d+,\d+,\d+),[\d.]+\)/, 'rgba($1,0.6)') || color)},
+          backgroundColor: ${JSON.stringify(bgColor)},
           borderColor: ${JSON.stringify(color)},
           borderWidth: 2${chartType === 'line' ? ',\n          tension: 0.3,\n          fill: false' : ''}
         }]`;
@@ -140,6 +157,10 @@ export function renderChart(ctx: RenderContext): string {
   const datasetCount = datasetsVal2 ? getArrayItems(datasetsVal2).length : 1;
   const showLegend = datasetCount > 1;
 
+  // Resolve text/grid colors from tokens (canvas can't read CSS vars)
+  const textColor = tokens.values['--t-text-secondary'] ?? '#666666';
+  const gridColor = tokens.values['--t-border-subtle'] ?? 'rgba(0,0,0,0.1)';
+
   return `<section class="tela-chart" style="${sectionStyle}">
   <div style="max-width: 800px; margin: 0 auto;">
     ${title ? `<h3 style="${titleStyle}">${esc(title)}</h3>` : ''}
@@ -148,7 +169,7 @@ export function renderChart(ctx: RenderContext): string {
     </div>
   </div>
 </section>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<!-- __TELA_CHARTJS__ -->
 <script>
 (function() {
   var ctx = document.getElementById('tela-chart-${sectionId}');
@@ -160,12 +181,20 @@ export function renderChart(ctx: RenderContext): string {
       datasets: ${datasetsJs}
     },
     options: {
+      animation: false,
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: ${showLegend} },
+        legend: {
+          display: ${showLegend},
+          labels: { color: ${JSON.stringify(textColor)} }
+        },
         title: { display: false }
-      }
+      },
+      scales: ${chartType === 'pie' || chartType === 'doughnut' ? '{}' : `{
+        x: { ticks: { color: ${JSON.stringify(textColor)} }, grid: { color: ${JSON.stringify(gridColor)} } },
+        y: { ticks: { color: ${JSON.stringify(textColor)} }, grid: { color: ${JSON.stringify(gridColor)} } }
+      }`}
     }
   });
 })();

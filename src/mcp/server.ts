@@ -11,6 +11,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { DocumentStore } from './store.js';
 import { SiteStore } from './site-store.js';
+import { ensureChartJs } from '../renderer/assets.js';
 import { COMPONENT_REGISTRY, listComponents } from '../primitives/index.js';
 import { THEME_NAMES } from '../tokens/types.js';
 import { THEME_PRESETS, WARM_EDITORIAL } from '../tokens/presets.js';
@@ -461,7 +462,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'render': {
-        const result = store.renderDocument(a['doc_id'] as string);
+        // Pre-fetch Chart.js if document contains chart sections
+        const _renderDocId = a['doc_id'] as string;
+        const _renderDoc = store.getDocument(_renderDocId);
+        const _hasCharts = _renderDoc.ast.sections.some(s => s.block.blockType === 'chart');
+        if (_hasCharts) {
+          try { await ensureChartJs(); } catch { /* network unavailable — will fall back to CDN */ }
+        }
+        const result = store.renderDocument(_renderDocId);
         const outDir = (a['out_dir'] as string | undefined) ?? path.join(os.tmpdir(), 'tela');
         fs.mkdirSync(outDir, { recursive: true });
         const htmlPath = path.join(outDir, `${a['doc_id']}.html`);
