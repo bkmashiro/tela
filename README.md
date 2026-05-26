@@ -1,8 +1,8 @@
 # Tela
 
-**LLM-native HTML page composer — layout primitives, aesthetic validation, MCP server.**
+**LLM-native HTML page composer — layout primitives, interactive components, multi-page sites.**
 
-LLMs describe pages using composable primitives. Tela renders them, checks them aesthetically, and feeds back structured guidance so the LLM can iterate.
+LLMs describe pages using composable primitives. Tela renders them to production HTML, validates aesthetics, and feeds back structured guidance so the LLM can iterate.
 
 ```
 create_document() → add_section() × N → render() → check() → update_section() → render()
@@ -12,30 +12,32 @@ create_document() → add_section() × N → render() → check() → update_sec
 
 ## Examples
 
-Three themes, rendered from the same notation structure:
+Three themes, rendered from the same notation:
 
-**`warm-editorial`** — parchment background, serif headline, editorial calm
-
-![warm-editorial theme](docs/assets/theme-warm-editorial.png)
-
-**`cool-technical`** — white, slate accent, developer clarity
-
-![cool-technical theme](docs/assets/theme-cool-technical.png)
-
-**`dark-dramatic`** — deep background, high contrast, bright accent
-
-![dark-dramatic theme](docs/assets/theme-dark-dramatic.png)
+| warm-editorial | cool-technical | dark-dramatic |
+|:-:|:-:|:-:|
+| ![warm-editorial](docs/assets/theme-warm-editorial.png) | ![cool-technical](docs/assets/theme-cool-technical.png) | ![dark-dramatic](docs/assets/theme-dark-dramatic.png) |
+| Parchment · Serif · Editorial | White · Slate · Developer | Dark · High contrast · Bold |
 
 ---
 
 ## How it works
 
-Instead of writing HTML or CSS, an LLM declares intent using Tela's notation — typed sections with modifier chains. Tela handles the translation to production HTML, validates the result against aesthetic rules, and returns machine-readable feedback the LLM can act on immediately.
+Instead of writing HTML or CSS, an LLM declares intent using Tela's notation — typed sections with modifier chains. Tela handles the translation, validates the result against aesthetic rules, and returns machine-readable feedback the LLM can act on immediately.
 
 ````
 ---
 theme: warm-editorial
 mode: landing
+---
+
+nav | sticky:
+  logo: Tela
+  links:
+    - label: Features | href(#features)
+    - label: Docs     | href(/docs)
+    - label: GitHub   | href(https://github.com/bkmashiro/tela) role(ghost)
+
 ---
 
 hero | split(60/40) pad(xl):
@@ -61,49 +63,93 @@ features | grid(3) gap(lg):
     title: Verifiable
     body: Checks read like design feedback.
   - icon: ◉ | accent
-    title: Bidirectional
-    body: Import any HTML into Tela.
+    title: Interactive
+    body: Tabs, accordions, modals — zero dependencies.
 
 ---
 
-quote | centered bg(surface.warm) pad(xl):
-  text: The best design gets out of the way.
-  attribution: — Someone wise
+tabs | pad(lg):
+  items:
+    - title: Overview
+      body: Tela renders layout intent to production HTML. No CSS. No templates.
+    - title: API
+      body: 16 MCP tools. create_document, add_section, render, check — all callable from any MCP client.
+    - title: Themes
+      body: warm-editorial, cool-technical, neutral-minimal, dark-dramatic.
+
+---
+
+accordion | pad(md):
+  items:
+    - question: Is Tela free?
+      answer: Yes, MIT licensed.
+    - question: Does it require a framework?
+      answer: No. Pure HTML + CSS + minimal vanilla JS. Zero runtime dependencies.
+
+---
+
+cta | centered pad(xl):
+  headline: Ready to build?
+  body: Join the beta. No credit card required.
+  cta:
+    - label: Get early access | role(primary)
 ````
 
-**Syntax rules:**
-- `---` separates sections (and wraps frontmatter)
-- `type | mod1 mod2(arg):` declares a block with a modifier chain
-- `|` separates type from modifiers; `mod(arg)` = with argument, `mod` = boolean flag
+**Syntax:**
+- `---` separates sections (also wraps frontmatter)
+- `type | mod1 mod2(arg):` declares a block with modifiers
+- `mod(arg)` = modifier with argument; `mod` = boolean flag
 - Indentation expresses child structure (YAML semantics)
 - `#` for comments
 
 ---
 
-## Layout Primitives
+## Primitives
 
-**Composition** — how children are arranged:
+### Semantic sections
 
 | Primitive | Description |
 |-----------|-------------|
-| `stack` | Vertical flow (default) |
-| `split(ratio)` | Horizontal split, e.g. `split(60/40)` |
-| `grid(n)` | n-column grid |
-| `masonry(n)` | Waterfall layout |
+| `hero` | Page header with headline, body, CTA — supports `split(60/40)` layout |
+| `features` | Grid of feature cards |
+| `quote` | Pull quote or blockquote |
+| `testimonial` | Customer quote with attribution |
 | `prose` | Single-column reading view |
+| `figure` | Image with aspect ratio, shadow, rounding |
+| `gallery` | Multi-image grid |
+| `cta` | Call-to-action band |
+| `aside` | Callout / info box |
+| `divider` | Horizontal rule |
+| `nav` | Navigation bar — sticky, responsive, hamburger menu |
+| `footer` | Page footer with links |
+
+### Interactive components
+
+Zero dependencies — all interactivity is inline vanilla JS + scoped CSS.
+
+| Primitive | Description |
+|-----------|-------------|
+| `tabs` | Tabbed content, ARIA-compliant, vanilla JS click handler |
+| `accordion` | Collapsible FAQ using `<details>`/`<summary>` — works without JS |
+| `modal` | Dialog overlay via native `<dialog>` + `showModal()` |
+| `toggle` | Styled checkbox toggle, animates via CSS |
+
+### Layout containers
+
+| Primitive | Description |
+|-----------|-------------|
+| `stack` | Vertical flex flow |
+| `split` | Horizontal split with configurable ratio |
+| `grid(n)` | n-column CSS grid |
 | `centered` | Horizontally centered container |
 
-**Semantic section types** (map to `<section>` with role):
+### Modifiers
 
-`hero` · `feature` · `quote` · `testimonial` · `prose` · `figure` · `gallery` · `cta` · `aside` · `divider` · `footer` · `nav`
-
-**Modifiers** (chain after `|`):
-
-`pad(xs|sm|md|lg|xl|section)` · `gap(xs|sm|md|lg|xl)` · `bg(token)` · `rounded` · `shadow(sm|md|lg)` · `bleed` · `aspect(w/h)` · `accent` · `muted` · `inverted` · `role(primary|ghost|danger)`
+`pad(xs|sm|md|lg|xl|section)` · `gap(xs|sm|md|lg|xl)` · `bg(token)` · `rounded` · `shadow(sm|md|lg)` · `bleed` · `aspect(w/h)` · `accent` · `muted` · `inverted` · `sticky` · `centered` · `split(n/m)` · `grid(n)` · `role(primary|ghost|danger)` · `href(url)` · `trigger("label")` · `label("text")`
 
 ---
 
-## Design Token System
+## Design Tokens
 
 All visual decisions flow through a semantic token tree — no raw CSS values in notation:
 
@@ -126,10 +172,10 @@ radius.sm=4 / md=8 / lg=16 / xl=24 / pill=999
 
 | Theme | Character |
 |-------|-----------|
-| `warm-editorial` | Parchment background, ink-blue accent, single serif — editorial calm |
-| `cool-technical` | White, slate accent, monospace emphasis — developer clarity |
-| `neutral-minimal` | Gray scale only, maximum whitespace — pure restraint |
-| `dark-dramatic` | Deep background, high contrast, bright accent — bold impact |
+| `warm-editorial` | Parchment background, ink-blue accent, serif headline |
+| `cool-technical` | White, slate accent, monospace emphasis |
+| `neutral-minimal` | Gray scale only, maximum whitespace |
+| `dark-dramatic` | Deep background, high contrast, bright accent |
 
 **Override syntax:**
 ```yaml
@@ -138,9 +184,33 @@ theme: warm-editorial + color.accent.default=#C84B31
 
 ---
 
+## Multi-page Sites
+
+Group documents into a named site and render them together with correct cross-page link resolution:
+
+```
+create_site("My Site", theme="warm-editorial")   → site_id
+add_page(site_id, slug="index",   doc_id=home_doc)
+add_page(site_id, slug="docs",    doc_id=docs_doc)
+add_page(site_id, slug="about",   doc_id=about_doc)
+render_site(site_id, out_dir="./dist")
+```
+
+Output structure:
+```
+dist/
+  index.html          ← slug "index"
+  docs/index.html     ← slug "docs"
+  about/index.html    ← slug "about"
+```
+
+Site-relative links (`href(/docs)`) resolve automatically relative to each page's location.
+
+---
+
 ## MCP Server
 
-Tela runs as an MCP server. Connect any MCP client and use 15 tools to create, edit, render, and check documents in a stateful session with full undo history.
+Tela runs as an MCP server. Connect any MCP client and use tools to create, edit, render, and check documents in a stateful session with full undo history.
 
 **Document lifecycle:**
 ```
@@ -151,7 +221,7 @@ list_documents()                        → [{id, mode, section_count}]
 undo(doc_id)                            → restored snapshot
 ```
 
-**Section editing** (primary unit of mutation):
+**Section editing:**
 ```
 add_section(doc_id, tela_fragment, position?)
 update_section(doc_id, section_id, tela_fragment)
@@ -160,10 +230,20 @@ reorder_sections(doc_id, section_ids[])
 set_theme(doc_id, theme_spec)
 ```
 
-**Fine-grained block editing:**
+**Fine-grained editing:**
 ```
 get_section(doc_id, section_id)           → annotated tela fragment
 update_block(doc_id, path, props)         # path: "hero.left.cta[0].label"
+```
+
+**Multi-page sites:**
+```
+create_site(name, theme?)               → site_id
+add_page(site_id, slug, doc_id)
+remove_page(site_id, slug)
+render_site(site_id, out_dir)           → {outputDir, pages[]}
+list_pages(site_id)                     → [{slug, docId}]
+list_sites()                            → [{id, name, pages[]}]
 ```
 
 **Render + check loop:**
@@ -218,10 +298,12 @@ Feedback reads like design guidance, not lint output. Every finding includes a c
 ## Typical LLM Workflow
 
 ```
-list_components()          # discover available primitives
+list_components()
 create_document(theme="warm-editorial", mode="landing")
+add_section(doc, "nav | sticky: ...")
 add_section(doc, "hero | split(60/40) pad(xl): ...")
 add_section(doc, "features | grid(3) gap(lg): ...")
+add_section(doc, "tabs | pad(lg): ...")
 add_section(doc, "cta | centered pad(xl): ...")
 render(doc)                # → {html_path, screenshot_path}
 check(doc)                 # → CheckReport
@@ -240,10 +322,10 @@ src/
   parser/       # .tela notation → AST
   tokens/       # token resolution + 4 theme presets
   renderer/     # AST → HTML+CSS (section-granular, incremental)
-  primitives/   # built-in block library (13 components)
+  primitives/   # built-in block library (17 components)
   checker/      # CheckReport engine (11 rules)
   extractor/    # existing HTML → .tela approximation
-  mcp/          # DocumentStore + MCP server (15 tools)
+  mcp/          # DocumentStore + SiteStore + MCP server (22 tools)
   cli/          # tela render / check / extract
 ```
 
@@ -257,14 +339,15 @@ src/
 | 1 | `tokens` — token system, 4 theme presets | ✅ complete |
 | 2 | `parser` — .tela → AST | ✅ complete |
 | 3 | `renderer` — AST → HTML+CSS, incremental | ✅ complete |
-| 4 | `primitives` — 13 built-in components | ✅ complete |
-| 4 | `mcp` — DocumentStore, 15 tools, history/undo | ✅ complete |
+| 4 | `primitives` — 17 built-in components | ✅ complete |
+| 4 | `mcp` — DocumentStore + SiteStore, 22 tools, history/undo | ✅ complete |
+| 4 | `interactive` — tabs, accordion, modal, toggle | ✅ complete |
 | 5 | `checker` — CheckReport, 11 rules, fix patches | 🔜 next |
 | 6 | Screenshot — Puppeteer integration | 🔜 next |
 | 7 | `extractor` — HTML → .tela | 🔜 next |
 | 8 | `apply_fix` — auto-patch from fix_id | 🔜 next |
 
-**59 tests passing. Zero TypeScript errors.**
+**103 tests passing. Zero TypeScript errors.**
 
 ---
 

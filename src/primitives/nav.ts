@@ -12,8 +12,8 @@ export function renderNav(ctx: RenderContext): string {
   const { block } = ctx.section;
   const { properties, modifiers } = block;
 
-  const brand = resolveString(properties['brand']);
-  const logo = resolveString(properties['logo'] ?? properties['logoSrc'] ?? { type: 'string', value: '', source: { line: 0, column: 0 } });
+  // Accept 'brand', 'logo', or 'name' as the brand text
+  const brand = resolveString(properties['brand'] ?? properties['logo'] ?? properties['name']);
   const linksVal = properties['links'];
   const ctaVal = properties['cta'];
 
@@ -58,7 +58,7 @@ export function renderNav(ctx: RenderContext): string {
     'display': 'flex',
     'align-items': 'center',
     'gap': T.spaceSm,
-  })}">${esc(brand)}</div>\n`;
+  })}">${esc(brand || 'Site')}</div>\n`;
 
   // Links + CTA
   html += `    <div class="tela-nav__links" style="${style({
