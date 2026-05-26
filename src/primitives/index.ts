@@ -24,6 +24,7 @@ import { renderChart } from './chart.js';
 import { renderDocsPage } from './docspage.js';
 import { renderTable } from './table.js';
 import { renderSteps } from './steps.js';
+import { renderComparison } from './comparison.js';
 
 export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
   hero: {
@@ -167,6 +168,12 @@ export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
     name: 'steps',
     render: renderSteps,
     validModifiers: ['pad', 'bg', 'dated'],
+    requiredProps: [],
+  },
+  comparison: {
+    name: 'comparison',
+    render: renderComparison,
+    validModifiers: ['pad', 'bg'],
     requiredProps: [],
   },
 };

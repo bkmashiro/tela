@@ -155,6 +155,14 @@ cta | centered pad(xl):
 | `toggle` | Styled checkbox toggle |
 | `chart` | Chart.js — bar, line, pie, doughnut — inlined for offline/headless use |
 
+### Data & structure
+
+| Primitive | Description |
+|-----------|-------------|
+| `table` | Data table — striped rows, column alignment, row highlight |
+| `steps` | Numbered process steps or dated timeline |
+| `comparison` | Side-by-side plan/edition comparison with highlighted column |
+
 ### Layout containers
 
 | Primitive | Description |
@@ -196,6 +204,63 @@ docspage | pad(lg):
         body: Main content here.
 ```
 
+### comparison example
+
+```
+comparison | pad(xl):
+  title: Compare plans
+  highlight: 2
+  columns:
+    - name: Starter
+      price: Free
+      cta: Get started | role(ghost)
+    - name: Pro
+      price: $29/mo
+      badge: Most Popular
+      cta: Start free trial | role(primary)
+    - name: Enterprise
+      price: Custom
+      cta: Contact sales | role(ghost)
+  rows:
+    - feature: API calls
+      values: 1k/mo, 100k/mo, Unlimited
+    - feature: Team seats
+      values: 1, 10, Unlimited
+    - feature: SSO
+      values: ✗, ✗, ✓
+```
+
+`highlight`: 1-indexed column number for the recommended/popular column.
+
+### steps example
+
+```
+steps | pad(lg):
+  items:
+    - title: Install
+      body: npm install && npm run build
+    - title: Configure
+      body: Add tela to your MCP client config.
+    - title: Compose
+      body: Use the 26 MCP tools to build your page.
+```
+
+Add `dated` modifier for a timeline layout with date labels instead of numbered badges.
+
+### table example
+
+```
+table | striped pad(lg):
+  title: Q2 Results
+  headers: Metric, Q1, Q2, Change
+  align: left, right, right, right
+  rows:
+    - Revenue, $1.2M, $1.8M, +50%
+    - Users, 8k, 14k, +75%
+    - Churn, 3.2%, 2.1%, -34%
+  highlight: last
+```
+
 ---
 
 ## Modifiers
@@ -222,6 +287,9 @@ docspage | pad(lg):
 | `cool-technical` | White · slate accent · monospace emphasis |
 | `neutral-minimal` | Gray scale only · maximum whitespace |
 | `dark-dramatic` | Deep background · high contrast · bright orange accent |
+| `report` | IBM Plex fonts · navy accent · tight spacing · conservative radius |
+| `pitch` | Space Grotesk · violet accent · generous spacing · high-impact display |
+| `academic` | EB Garamond throughout · muted blue · generous leading · flat shadows |
 
 **Override:** `theme: warm-editorial + color.accent.default=#C84B31`
 
@@ -410,16 +478,18 @@ src/
 | Phase | Package | Status |
 |-------|---------|--------|
 | 0 | `ast` — typed AST definitions | ✅ |
-| 1 | `tokens` — token system, 4 themes | ✅ |
+| 1 | `tokens` — token system, 7 themes | ✅ |
 | 2 | `parser` — .tela → AST | ✅ |
 | 3 | `renderer` — AST → HTML+CSS, incremental | ✅ |
-| 4 | `primitives` — 30+ components | ✅ |
+| 4 | `primitives` — 33+ components | ✅ |
 | 4 | `mcp` — 26 tools, DocumentStore, SiteStore, undo | ✅ |
 | 4 | `interactive` — tabs, accordion, modal, toggle, chart | ✅ |
 | 4 | `describe` — semantic layout manifest | ✅ |
 | 5 | `checker` — 11 rules, fix patches | ✅ |
 | 6 | Screenshot + layout measurement — Puppeteer integration | ✅ |
 | 7 | `extractor` — HTML → .tela | ✅ |
+| 8 | `data` — table, steps, comparison primitives | ✅ |
+| 8 | `themes` — report, pitch, academic | ✅ |
 
 **110 tests passing. Zero TypeScript errors.**
 
