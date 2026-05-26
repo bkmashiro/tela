@@ -12,7 +12,7 @@ export function renderCta(ctx: RenderContext): string {
 
   const headline = resolveString(properties['headline']);
   const body = resolveString(properties['body']);
-  const actions = properties['actions'];
+  const actions = properties['actions'] ?? properties['cta'];
 
   const isCentered = hasMod(modifiers, 'centered') || true; // CTA is always centered by design
   const isInverted = hasMod(modifiers, 'inverted');

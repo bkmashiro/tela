@@ -10,7 +10,7 @@ import { T, esc, style, resolveString, getBlockValueProps, getArrayItems } from 
  * @param cta - The value containing button definitions (array of blockValues)
  * @param inverted - Whether to use inverted colors (light buttons on dark bg)
  */
-export function renderCtaGroup(cta: Value, inverted: boolean = false): string {
+export function renderCtaGroup(cta: Value, inverted: boolean = false, centered: boolean = false): string {
   const items = getArrayItems(cta);
   if (items.length === 0) return '';
 
@@ -24,6 +24,7 @@ export function renderCtaGroup(cta: Value, inverted: boolean = false): string {
     'gap': T.spaceSm,
     'flex-wrap': 'wrap',
     'align-items': 'center',
+    ...(centered ? { 'justify-content': 'center' } : {}),
   })}">
 ${buttonsHtml}    </div>`;
 }

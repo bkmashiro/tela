@@ -91,7 +91,7 @@ export function renderHero(ctx: RenderContext): string {
   }
 
   if (cta) {
-    html += renderCtaGroup(cta, isInverted);
+    html += renderCtaGroup(cta, isInverted, isCentered);
   }
 
   html += `  </div>\n</section>`;
@@ -187,22 +187,23 @@ function renderSplitHero(
     const figSrc = resolveString(figureVal.type === 'modified' ? figureVal.base : figureVal);
     const figMods = figureVal.type === 'modified' ? figureVal.modifiers : [];
     const aspectMod = figMods.find((m) => m.name === 'aspect');
-    const aspect = aspectMod
+    const aspectRatio = aspectMod
       ? `${aspectMod.args[0]}/${aspectMod.args[1]}`
-      : 'auto';
+      : '4/3';
     const isRounded = figMods.some((m) => m.name === 'rounded');
     const shadowArg = figMods.find((m) => m.name === 'shadow')?.args[0];
     const shadow = shadowArg ? shadowToken(String(shadowArg)) : 'none';
 
-    rightHtml += `      <img src="${esc(figSrc)}" alt="" class="tela-figure" style="${style({
+    // Render as background-image div for reliable aspect-ratio sizing
+    rightHtml += `      <div class="tela-figure" style="${style({
       'width': '100%',
-      'height': 'auto',
-      'aspect-ratio': aspect,
-      'object-fit': 'cover',
+      'aspect-ratio': aspectRatio,
+      'background-image': `url('${figSrc}')`,
+      'background-size': 'cover',
+      'background-position': 'center',
       'border-radius': isRounded ? T.radiusLg : '0',
       'box-shadow': shadow,
-      'display': 'block',
-    })}">\n`;
+    })}"></div>\n`;
   }
 
   return `<section class="tela-hero tela-hero--split-${leftFr}-${rightFr}" style="${sectionStyle}">
