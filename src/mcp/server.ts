@@ -13,6 +13,9 @@ import { DocumentStore } from './store.js';
 import { COMPONENT_REGISTRY, listComponents } from '../primitives/index.js';
 import { THEME_NAMES } from '../tokens/types.js';
 import { THEME_PRESETS, WARM_EDITORIAL } from '../tokens/presets.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 
 const store = new DocumentStore();
 
@@ -148,13 +151,37 @@ const TOOLS = [
   },
   {
     name: 'render',
-    description: 'Render a document to HTML. Returns the rendered HTML.',
+    description: 'Render a document to HTML. Writes to a file and returns {html_path, section_ids}. Also attempts a Puppeteer screenshot if available.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        doc_id: { type: 'string' },
+        out_dir: { type: 'string', description: 'Directory to write HTML into (default: OS temp dir)' },
+      },
+      required: ['doc_id'],
+    },
+  },
+  {
+    name: 'check',
+    description: 'Run aesthetic and structural checks on a rendered document. Returns a CheckReport with score, findings, and auto-applicable fix IDs.',
     inputSchema: {
       type: 'object' as const,
       properties: {
         doc_id: { type: 'string' },
       },
       required: ['doc_id'],
+    },
+  },
+  {
+    name: 'apply_fix',
+    description: 'Apply a specific fix from the last check() report. Updates the document in-place and returns the mutated section.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        doc_id: { type: 'string' },
+        fix_id: { type: 'string', description: 'Fix ID from CheckReport (e.g. "spacing-rhythm.001")' },
+      },
+      required: ['doc_id', 'fix_id'],
     },
   },
   {
@@ -347,11 +374,78 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'render': {
         const result = store.renderDocument(a['doc_id'] as string);
+        const outDir = (a['out_dir'] as string | undefined) ?? path.join(os.tmpdir(), 'tela');
+        fs.mkdirSync(outDir, { recursive: true });
+        const htmlPath = path.join(outDir, `${a['doc_id']}.html`);
+        fs.writeFileSync(htmlPath, result.html, 'utf8');
+
+        // Attempt Puppeteer screenshot (graceful degradation)
+        let screenshotPath: string | null = null;
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { default: puppeteer } = await import('puppeteer' as any) as any;
+          const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+          const page = await browser.newPage();
+          await page.setViewport({ width: 1440, height: 900 });
+          await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle0' });
+          screenshotPath = path.join(outDir, `${a['doc_id']}.png`);
+          await page.screenshot({ path: screenshotPath, fullPage: true });
+          await browser.close();
+        } catch {
+          // puppeteer not installed or failed — continue without screenshot
+        }
+
         return {
           content: [{ type: 'text', text: JSON.stringify({
-            html: result.html,
-            rendered_sections: result.renderedSections,
+            html_path: htmlPath,
+            screenshot_path: screenshotPath,
             section_ids: result.sectionIds,
+          }) }],
+        };
+      }
+
+      case 'check': {
+        // Checker (Phase 5) — structural stubs return passing checks for now.
+        // Full implementation: src/checker/ with 11 rules.
+        const doc = store.getDocument(a['doc_id'] as string);
+        const checks: Array<{id: string; severity: string; rule: string; location: string; finding: string; fix: string}> = [];
+
+        // Stub: scan for unfilled {{...}} placeholders in rendered HTML
+        const renderResult = store.renderDocument(a['doc_id'] as string);
+        const placeholders = [...renderResult.html.matchAll(/\{\{([^}]+)\}\}/g)];
+        for (const [, name] of placeholders) {
+          checks.push({
+            id: `unfilled-slots.${checks.length + 1}`,
+            severity: 'error',
+            rule: 'unfilled-slots',
+            location: 'document',
+            finding: `Unfilled placeholder: {{${name}}}`,
+            fix: `Replace {{${name}}} with actual content`,
+          });
+        }
+
+        const score = checks.filter(c => c.severity === 'error').length === 0
+          ? (checks.filter(c => c.severity === 'warning').length === 0 ? 100 : 80)
+          : 50;
+
+        return {
+          content: [{ type: 'text', text: JSON.stringify({
+            score,
+            summary: checks.length === 0
+              ? 'No issues found.'
+              : `${checks.filter(c => c.severity === 'error').length} error(s), ${checks.filter(c => c.severity === 'warning').length} warning(s)`,
+            checks,
+            _note: 'Full checker (Phase 5) not yet implemented. Only unfilled-slots check is active.',
+          }) }],
+        };
+      }
+
+      case 'apply_fix': {
+        // apply_fix (Phase 8) — not yet implemented
+        return {
+          content: [{ type: 'text', text: JSON.stringify({
+            error: 'apply_fix not yet implemented (Phase 8). Use update_section() to apply fixes manually.',
+            fix_id: a['fix_id'],
           }) }],
         };
       }
