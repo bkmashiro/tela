@@ -12,6 +12,7 @@ const GOOGLE_FONTS: Record<string, string> = {
   'IBM Plex Sans': 'IBM+Plex+Sans:wght@400;500;600',
   'IBM Plex Mono': 'IBM+Plex+Mono:wght@400',
   'JetBrains Mono': 'JetBrains+Mono:wght@400',
+  'Space Grotesk': 'Space+Grotesk:wght@400;500;600;700',
   // System fonts — no load needed
   'Charter': '',
   'Georgia': '',

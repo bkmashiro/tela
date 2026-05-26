@@ -32,7 +32,9 @@ export type ThemeName =
   | 'cool-technical'
   | 'neutral-minimal'
   | 'dark-dramatic'
-  | 'report';
+  | 'report'
+  | 'pitch'
+  | 'academic';
 
 export const THEME_NAMES: ThemeName[] = [
   'warm-editorial',
@@ -40,4 +42,6 @@ export const THEME_NAMES: ThemeName[] = [
   'neutral-minimal',
   'dark-dramatic',
   'report',
+  'pitch',
+  'academic',
 ];

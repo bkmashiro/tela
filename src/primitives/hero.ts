@@ -22,7 +22,9 @@ export function renderHero(ctx: RenderContext): string {
 
   // Background
   const bgToken = getModArg(modifiers, 'bg', '');
-  const bgStyle = bgToken ? `var(--t-${bgToken.replace(/\./g, '-')})` : T.surfaceDefault;
+  const bgStyle = bgToken
+    ? `var(--t-${bgToken.replace(/\./g, '-')})`
+    : isInverted ? T.surfaceInverted : T.surfaceDefault;
   const textColor = isInverted ? T.textInverse : T.textPrimary;
 
   const padValue = spaceToken(padSize);
@@ -114,7 +116,9 @@ function renderSplitHero(
   const rightFr = splitMod?.args[1] ?? 40;
 
   const bgToken = getModArg(modifiers, 'bg', '');
-  const bgStyle = bgToken ? `var(--t-${bgToken.replace(/\./g, '-')})` : T.surfaceDefault;
+  const bgStyle = bgToken
+    ? `var(--t-${bgToken.replace(/\./g, '-')})`
+    : isInverted ? T.surfaceInverted : T.surfaceDefault;
 
   const sectionStyle = style({
     'padding': `${padValue} var(--t-space-xl)`,
