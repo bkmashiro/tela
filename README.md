@@ -12,29 +12,38 @@
 
 ---
 
-## Quickstart (CLI)
+## Quickstart
+
+### MCP server (recommended)
 
 ```bash
 npm install && npm run build
+node dist/mcp/server.js
+```
 
-# Create a document and add sections
+Connect Claude Desktop, Cursor, Zed, or any MCP client. Add to your MCP config:
+
+```json
+{
+  "mcpServers": {
+    "tela": {
+      "command": "node",
+      "args": ["/path/to/tela/dist/mcp/server.js"]
+    }
+  }
+}
+```
+
+Then use the 26 tools directly from your LLM. No CLI needed.
+
+### CLI (testing / scripting)
+
+```bash
 node dist/tela-call.js create_document '{"theme":"warm-editorial","mode":"landing"}'
-# → "doc-001"
-
-node dist/tela-call.js add_section '{
-  "doc_id": "doc-001",
-  "tela_fragment": "hero | split(60/40) pad(xl):\n  left:\n    headline: Hello World\n    body: Welcome to Tela.\n    cta:\n      - label: Get started | role(primary)\n  right:\n    figure: https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800 | aspect(4/3) rounded shadow(lg)"
-}'
-
+node dist/tela-call.js add_section '{"doc_id":"doc-001","tela_fragment":"hero | pad(xl):\n  headline: Hello"}'
 node dist/tela-call.js render '{"doc_id":"doc-001","out_dir":"/tmp/tela"}'
-# → {html_path, screenshot_path, section_ids, layout}
-
 node dist/tela-call.js describe '{"doc_id":"doc-001"}'
-# → compact text manifest: sections, fold positions, overlaps
-
 node dist/tela-call.js check '{"doc_id":"doc-001"}'
-# → {score, summary, checks[]}
-
 node dist/tela-call.js apply_fix '{"doc_id":"doc-001","fix_id":"spacing-rhythm.001"}'
 ```
 
@@ -247,44 +256,46 @@ radius.sm=4 / md=8 / lg=16 / xl=24 / pill=999
 
 ---
 
-## All CLI tools
+## Tool reference
 
-```bash
+26 tools — available via MCP server or CLI (`node dist/tela-call.js <tool> '<json>'`).
+
+```
 # Document lifecycle
-node dist/tela-call.js create_document   '{"theme":"warm-editorial","mode":"landing","lang":"en"}'
-node dist/tela-call.js open_document     '{"path":"./page.tela"}'
-node dist/tela-call.js save_document     '{"doc_id":"doc-001","path":"./page.tela"}'
-node dist/tela-call.js list_documents    '{}'
-node dist/tela-call.js undo              '{"doc_id":"doc-001"}'
+create_document    {"theme","mode","lang"}          → doc_id
+open_document      {"path"}                         → doc_id
+save_document      {"doc_id","path?"}               → saved_path
+list_documents     {}                               → [{id,mode,theme,sectionCount}]
+undo               {"doc_id"}                       → restored snapshot
 
 # Section editing
-node dist/tela-call.js add_section       '{"doc_id":"doc-001","tela_fragment":"hero | pad(xl):\n  headline: Hi"}'
-node dist/tela-call.js update_section    '{"doc_id":"doc-001","section_id":"section-1","tela_fragment":"..."}'
-node dist/tela-call.js remove_section    '{"doc_id":"doc-001","section_id":"section-1"}'
-node dist/tela-call.js reorder_sections  '{"doc_id":"doc-001","section_ids":["section-2","section-0","section-1"]}'
-node dist/tela-call.js get_section       '{"doc_id":"doc-001","section_id":"section-1"}'
-node dist/tela-call.js set_theme         '{"doc_id":"doc-001","theme_spec":"dark-dramatic"}'
-node dist/tela-call.js update_block      '{"doc_id":"doc-001","path":"section-1.headline","props":{"headline":"New Title"}}'
+add_section        {"doc_id","tela_fragment","position?"}   → section_id
+update_section     {"doc_id","section_id","tela_fragment"}
+remove_section     {"doc_id","section_id"}
+reorder_sections   {"doc_id","section_ids":[...]}
+get_section        {"doc_id","section_id"}          → annotated tela fragment
+set_theme          {"doc_id","theme_spec"}
+update_block       {"doc_id","path","props":{}}      # path: "section-1.headline"
 
 # Render + feedback
-node dist/tela-call.js render            '{"doc_id":"doc-001","out_dir":"/tmp/tela"}'
-node dist/tela-call.js describe          '{"doc_id":"doc-001"}'
-node dist/tela-call.js check             '{"doc_id":"doc-001"}'
-node dist/tela-call.js apply_fix         '{"doc_id":"doc-001","fix_id":"spacing-rhythm.001"}'
+render             {"doc_id","out_dir?"}             → {html_path, screenshot_path, layout}
+describe           {"doc_id"}                        → text layout manifest
+check              {"doc_id"}                        → {score, summary, checks[]}
+apply_fix          {"doc_id","fix_id"}               → auto-patch from checker
 
 # Discovery
-node dist/tela-call.js list_components   '{}'
-node dist/tela-call.js list_themes       '{}'
-node dist/tela-call.js list_modifiers    '{}'
-node dist/tela-call.js extract_html      '{"html":"<html>...</html>"}'
+list_components    {}                               → block registry + example notation
+list_themes        {}                               → theme presets + token values
+list_modifiers     {}                               → modifier vocabulary + valid values
+extract_html       {"html"}                         → .tela approximation
 
 # Multi-page sites
-node dist/tela-call.js create_site       '{"name":"My Site","theme":"warm-editorial"}'
-node dist/tela-call.js add_page          '{"site_id":"site-001","slug":"index","doc_id":"doc-001"}'
-node dist/tela-call.js remove_page       '{"site_id":"site-001","slug":"index"}'
-node dist/tela-call.js render_site       '{"site_id":"site-001","out_dir":"./dist"}'
-node dist/tela-call.js list_pages        '{"site_id":"site-001"}'
-node dist/tela-call.js list_sites        '{}'
+create_site        {"name","theme?"}                → site_id
+add_page           {"site_id","slug","doc_id"}
+remove_page        {"site_id","slug"}
+render_site        {"site_id","out_dir"}            → {outputDir, pages[]}
+list_pages         {"site_id"}
+list_sites         {}
 ```
 
 ---
