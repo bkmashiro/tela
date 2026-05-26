@@ -50,13 +50,19 @@ export function compile(doc: TelaDocument): ComponentTree {
 
 // ─── Renderer ─────────────────────────────────────────────────────────────────
 
+export interface RenderOptions {
+  basePath?: string;
+  sitePages?: string[];
+}
+
 /**
  * Render a ComponentTree to an HTML string.
  * Uses the provided cache for incremental rendering.
  */
 export function render(
   tree: ComponentTree,
-  cache: RenderCache = makeEmptyCache()
+  cache: RenderCache = makeEmptyCache(),
+  opts: RenderOptions = {}
 ): RenderResult {
   const tokenHash = hashTokens(tree.tokens);
   const themeChanged = tokenHash !== cache.tokenHash;
@@ -72,11 +78,13 @@ export function render(
     let html: string;
     const cached = cache.sections.get(section.id);
 
-    if (cached && !themeChanged) {
+    if (cached && !themeChanged && !opts.basePath && !opts.sitePages) {
       html = cached;
     } else {
-      html = renderSection(section, tree);
-      cache.sections.set(section.id, html);
+      html = renderSection(section, tree, opts);
+      if (!opts.basePath && !opts.sitePages) {
+        cache.sections.set(section.id, html);
+      }
       renderedSections.push(section.id);
     }
 
@@ -100,11 +108,13 @@ export function render(
   return { html, renderedSections };
 }
 
-function renderSection(section: CompiledSection, tree: ComponentTree): string {
+function renderSection(section: CompiledSection, tree: ComponentTree, opts: RenderOptions = {}): string {
   const ctx: RenderContext = {
     tokens: tree.tokens,
     section,
     mode: tree.frontmatter.mode,
+    basePath: opts.basePath,
+    sitePages: opts.sitePages,
   };
   return renderBlock(section.block, ctx);
 }

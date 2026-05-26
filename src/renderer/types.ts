@@ -22,6 +22,8 @@ export interface RenderContext {
   tokens: ResolvedTokens;
   section: CompiledSection;
   mode: 'landing' | 'article' | 'docs';
+  basePath?: string;    // for site-relative link resolution
+  sitePages?: string[]; // available page slugs
 }
 
 export type ComponentRenderFn = (ctx: RenderContext) => string;

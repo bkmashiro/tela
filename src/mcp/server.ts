@@ -10,6 +10,7 @@ import {
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { DocumentStore } from './store.js';
+import { SiteStore } from './site-store.js';
 import { COMPONENT_REGISTRY, listComponents } from '../primitives/index.js';
 import { THEME_NAMES } from '../tokens/types.js';
 import { THEME_PRESETS, WARM_EDITORIAL } from '../tokens/presets.js';
@@ -21,6 +22,7 @@ import path from 'node:path';
 import os from 'node:os';
 
 const store = new DocumentStore();
+const siteStore = new SiteStore(store);
 
 // ─── Per-document check report storage (for apply_fix) ───────────────────────
 /** Maps doc_id → latest CheckReport (so apply_fix can look up patches). */
@@ -226,6 +228,74 @@ const TOOLS = [
         html: { type: 'string', description: 'Raw HTML to extract from' },
       },
       required: ['html'],
+    },
+  },
+  {
+    name: 'create_site',
+    description: 'Create a new multi-page site.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        name: { type: 'string', description: 'Site name' },
+        theme: { type: 'string', description: 'Default theme for the site' },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'add_page',
+    description: 'Add a page (document) to a site.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        site_id: { type: 'string', description: 'Site ID' },
+        slug: { type: 'string', description: 'Page slug (e.g. "index", "docs", "about/team")' },
+        doc_id: { type: 'string', description: 'Document ID to associate with this slug' },
+      },
+      required: ['site_id', 'slug', 'doc_id'],
+    },
+  },
+  {
+    name: 'remove_page',
+    description: 'Remove a page from a site.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        site_id: { type: 'string' },
+        slug: { type: 'string' },
+      },
+      required: ['site_id', 'slug'],
+    },
+  },
+  {
+    name: 'render_site',
+    description: 'Render all pages of a site to HTML files in a directory.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        site_id: { type: 'string' },
+        out_dir: { type: 'string', description: 'Output directory path' },
+      },
+      required: ['site_id', 'out_dir'],
+    },
+  },
+  {
+    name: 'list_pages',
+    description: 'List all pages in a site.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        site_id: { type: 'string' },
+      },
+      required: ['site_id'],
+    },
+  },
+  {
+    name: 'list_sites',
+    description: 'List all sites.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {},
     },
   },
 ];
@@ -561,6 +631,58 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const extractionResult = extract(htmlInput);
         return {
           content: [{ type: 'text', text: JSON.stringify(extractionResult) }],
+        };
+      }
+
+      case 'create_site': {
+        const siteId = siteStore.createSite(
+          a['name'] as string,
+          a['theme'] as string | undefined
+        );
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ site_id: siteId }) }],
+        };
+      }
+
+      case 'add_page': {
+        siteStore.addPage(
+          a['site_id'] as string,
+          a['slug'] as string,
+          a['doc_id'] as string
+        );
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true }) }],
+        };
+      }
+
+      case 'remove_page': {
+        siteStore.removePage(a['site_id'] as string, a['slug'] as string);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ success: true }) }],
+        };
+      }
+
+      case 'render_site': {
+        const result = await siteStore.renderSite(
+          a['site_id'] as string,
+          a['out_dir'] as string
+        );
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result) }],
+        };
+      }
+
+      case 'list_pages': {
+        const pages = siteStore.listPages(a['site_id'] as string);
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ pages }) }],
+        };
+      }
+
+      case 'list_sites': {
+        const sites = siteStore.listSites();
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ sites }) }],
         };
       }
 

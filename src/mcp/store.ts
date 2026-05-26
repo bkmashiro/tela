@@ -9,6 +9,7 @@ import type { TelaDocument, Value } from '../ast/types.js';
 import { parse } from '../parser/index.js';
 import { parseThemeSpec } from '../tokens/resolver.js';
 import { compile, render, makeEmptyCache } from '../renderer/index.js';
+import type { RenderOptions } from '../renderer/index.js';
 import type {
   ComponentTree,
   RenderCache,
@@ -505,14 +506,14 @@ export class DocumentStore {
     this.persistSession(doc);
   }
 
-  renderDocument(docId: string): RenderDocResult {
+  renderDocument(docId: string, renderOpts?: RenderOptions): RenderDocResult {
     const doc = this.getDocument(docId);
 
     if (!doc.compiled) {
       doc.compiled = compile(doc.ast);
     }
 
-    const result = render(doc.compiled, doc.renderCache);
+    const result = render(doc.compiled, doc.renderCache, renderOpts ?? {});
     doc.rendered = result.html;
 
     return {

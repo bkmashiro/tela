@@ -175,6 +175,28 @@ export function getArrayItems(val: Value | undefined): Value[] {
   return [];
 }
 
+/**
+ * Resolve a site-relative href given the current page's basePath.
+ * - External URLs (http/https) and anchors (#) are left unchanged
+ * - Site-relative paths (/docs) are made relative to basePath
+ */
+export function resolveHref(href: string, basePath?: string): string {
+  if (!href) return '#';
+  if (href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) {
+    return href;
+  }
+  if (href.startsWith('/') && basePath) {
+    // Compute relative path from basePath to href
+    const fromParts = basePath.split('/').filter(Boolean);
+    const toParts = href.split('/').filter(Boolean);
+    const upCount = fromParts.length;
+    const parts = [...Array(upCount).fill('..'), ...toParts];
+    const result = parts.join('/');
+    return result || './';
+  }
+  return href;
+}
+
 /** Inline-style CSS generation helper. */
 export function style(props: Record<string, string | undefined>): string {
   const parts: string[] = [];

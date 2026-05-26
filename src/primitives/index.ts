@@ -16,6 +16,10 @@ import { renderDivider } from './divider.js';
 import { renderFooter } from './footer.js';
 import { renderNav } from './nav.js';
 import { renderStack, renderSplit, renderCentered } from './stack.js';
+import { renderTabs } from './tabs.js';
+import { renderAccordion } from './accordion.js';
+import { renderModal } from './modal.js';
+import { renderToggle } from './toggle.js';
 
 export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
   hero: {
@@ -112,6 +116,30 @@ export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
     name: 'centered',
     render: renderCentered,
     validModifiers: ['pad'],
+  },
+  tabs: {
+    name: 'tabs',
+    render: renderTabs,
+    validModifiers: ['pad', 'bg', 'inverted'],
+    requiredProps: [],
+  },
+  accordion: {
+    name: 'accordion',
+    render: renderAccordion,
+    validModifiers: ['pad', 'bg'],
+    requiredProps: [],
+  },
+  modal: {
+    name: 'modal',
+    render: renderModal,
+    validModifiers: ['pad', 'trigger'],
+    requiredProps: [],
+  },
+  toggle: {
+    name: 'toggle',
+    render: renderToggle,
+    validModifiers: ['label', 'pad', 'centered'],
+    requiredProps: [],
   },
 };
 
