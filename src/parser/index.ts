@@ -627,12 +627,6 @@ class TelaParser {
         continue;
       }
 
-      if (this.isBlockHeader(bodyText)) {
-        const block = this.parseBlock(indent);
-        children.push({ type: 'array', items: [], source: block.source });
-        continue;
-      }
-
       const colonIdx = findColon(bodyText);
       if (colonIdx === -1) break;
 
@@ -649,8 +643,15 @@ class TelaParser {
       if (rest === '') {
         const peek = this.peekLine();
         if (peek && peek.indent > indent) {
-          const bv = this.parseBlockValueBody(peek.indent);
-          properties[key] = bv;
+          const deeperText = peek.content.slice(peek.indent);
+          if (deeperText.startsWith('- ')) {
+            // Array property (e.g. cta: → - label: ...)
+            const arr = this.parseArrayItems(peek.indent);
+            properties[key] = arr;
+          } else {
+            const bv = this.parseBlockValueBody(peek.indent);
+            properties[key] = bv;
+          }
         } else {
           properties[key] = { type: 'string', value: '', source: makeLoc(line.lineNumber, 1, this.file) };
         }

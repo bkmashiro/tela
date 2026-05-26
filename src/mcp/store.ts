@@ -69,7 +69,7 @@ export interface RenderDocResult {
 
 // ─── Value serializer ─────────────────────────────────────────────────────────
 
-function serializeValue(val: Value): string {
+function serializeScalarValue(val: Value): string {
   switch (val.type) {
     case 'string':
       return (val.value.includes(':') || val.value.includes('|') || val.value.startsWith('"'))
@@ -82,17 +82,91 @@ function serializeValue(val: Value): string {
     case 'multiline':
       return val.lines.join('\n');
     case 'modified': {
-      const base = serializeValue(val.base);
+      const base = serializeScalarValue(val.base);
       const mods = val.modifiers.map((m) =>
         m.args.length === 0 ? m.name : `${m.name}(${m.args.join('/')})`
       ).join(' ');
       return `${base} | ${mods}`;
     }
     case 'array':
-      return val.items.map(serializeValue).join(', ');
+      return val.items.map(serializeScalarValue).join(', ');
     case 'blockValue':
-      return '{}';
+      // blockValue must be serialized with indentation — use placeholder
+      return '__BLOCK_VALUE__';
   }
+}
+
+/**
+ * Serialize a Value into lines at the given indentation depth.
+ * Returns an array of fully-indented lines.
+ */
+function serializeValueLines(key: string, val: Value, indent: number): string[] {
+  const pad = ' '.repeat(indent);
+
+  if (val.type === 'blockValue') {
+    // Nested block: emit "key:" then indented properties
+    const lines: string[] = [`${pad}${key}:`];
+    for (const [k, v] of Object.entries(val.properties)) {
+      lines.push(...serializeValueLines(k, v, indent + 2));
+    }
+    for (const child of val.children) {
+      if (child.type === 'array') {
+        for (const item of child.items) {
+          if (item.type === 'blockValue') {
+            const itemProps = Object.entries(item.properties);
+            if (itemProps.length === 0) {
+              lines.push(`${pad}  -`);
+            } else {
+              const [firstKey, firstVal] = itemProps[0];
+              const firstSv = serializeScalarValue(firstVal);
+              lines.push(`${pad}  - ${firstKey}: ${firstSv}`);
+              for (const [k2, v2] of itemProps.slice(1)) {
+                lines.push(...serializeValueLines(k2, v2, indent + 4));
+              }
+            }
+          } else {
+            lines.push(`${pad}  - ${serializeScalarValue(item)}`);
+          }
+        }
+      }
+    }
+    return lines;
+  }
+
+  if (val.type === 'array') {
+    // Array property: emit as list items
+    const lines: string[] = [`${pad}${key}:`];
+    for (const item of val.items) {
+      if (item.type === 'blockValue') {
+        const itemProps = Object.entries(item.properties);
+        if (itemProps.length === 0) {
+          lines.push(`${pad}  -`);
+        } else {
+          const [firstKey, firstVal] = itemProps[0];
+          const firstSv = serializeScalarValue(firstVal);
+          lines.push(`${pad}  - ${firstKey}: ${firstSv}`);
+          for (const [k2, v2] of itemProps.slice(1)) {
+            lines.push(...serializeValueLines(k2, v2, indent + 4));
+          }
+        }
+      } else {
+        lines.push(`${pad}  - ${serializeScalarValue(item)}`);
+      }
+    }
+    return lines;
+  }
+
+  if (val.type === 'multiline') {
+    const lines: string[] = [`${pad}${key}: |`];
+    const innerPad = ' '.repeat(indent + 2);
+    for (const line of val.lines) {
+      lines.push(`${innerPad}${line}`);
+    }
+    return lines;
+  }
+
+  const sv = serializeScalarValue(val);
+  return [`${pad}${key}: ${sv}`];
 }
 
 function docToSource(doc: TelaDocument): string {
@@ -128,14 +202,27 @@ function docToSource(doc: TelaDocument): string {
     }
     parts.push(`${header}:`);
     for (const [key, val] of Object.entries(block.properties)) {
-      const sv = serializeValue(val);
-      if (sv.includes('\n')) {
-        parts.push(`  ${key}: |`);
-        for (const line of sv.split('\n')) {
-          parts.push(`    ${line}`);
+      parts.push(...serializeValueLines(key, val, 2));
+    }
+    // Serialize top-level children (unnamed arrays)
+    for (const child of block.children) {
+      if (child.type === 'array') {
+        for (const item of child.items) {
+          if (item.type === 'blockValue') {
+            const itemProps = Object.entries(item.properties);
+            if (itemProps.length === 0) {
+              parts.push('  -');
+            } else {
+              const [firstKey, firstVal] = itemProps[0];
+              parts.push(`  - ${firstKey}: ${serializeScalarValue(firstVal)}`);
+              for (const [k2, v2] of itemProps.slice(1)) {
+                parts.push(...serializeValueLines(k2, v2, 4));
+              }
+            }
+          } else {
+            parts.push(`  - ${serializeScalarValue(item)}`);
+          }
         }
-      } else {
-        parts.push(`  ${key}: ${sv}`);
       }
     }
     parts.push('---');
@@ -379,7 +466,8 @@ export class DocumentStore {
     }
     tela += ':';
     for (const [key, val] of Object.entries(block.properties)) {
-      tela += `\n  ${key}: ${serializeValue(val)}`;
+      const lines = serializeValueLines(key, val, 2);
+      tela += '\n' + lines.join('\n');
     }
 
     return {
