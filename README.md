@@ -10,6 +10,24 @@ create_document() → add_section() × N → render() → check() → update_sec
 
 ---
 
+## Examples
+
+Three themes, rendered from the same notation structure:
+
+**`warm-editorial`** — parchment background, serif headline, editorial calm
+
+![warm-editorial theme](docs/assets/theme-warm-editorial.png)
+
+**`cool-technical`** — white, slate accent, developer clarity
+
+![cool-technical theme](docs/assets/theme-cool-technical.png)
+
+**`dark-dramatic`** — deep background, high contrast, bright accent
+
+![dark-dramatic theme](docs/assets/theme-dark-dramatic.png)
+
+---
+
 ## How it works
 
 Instead of writing HTML or CSS, an LLM declares intent using Tela's notation — typed sections with modifier chains. Tela handles the translation to production HTML, validates the result against aesthetic rules, and returns machine-readable feedback the LLM can act on immediately.
