@@ -12,12 +12,22 @@ create_document() → add_section() × N → render() → check() → update_sec
 
 ## Examples
 
-Three themes, rendered from the same notation:
+Five examples across themes and modes:
 
 | warm-editorial | cool-technical | dark-dramatic |
 |:-:|:-:|:-:|
 | ![warm-editorial](docs/assets/theme-warm-editorial.png) | ![cool-technical](docs/assets/theme-cool-technical.png) | ![dark-dramatic](docs/assets/theme-dark-dramatic.png) |
 | Parchment · Serif · Editorial | White · Slate · Developer | Dark · High contrast · Bold |
+
+| article (warm-editorial) | dashboard + charts (dark-dramatic) |
+|:-:|:-:|
+| ![article](docs/assets/theme-article-warm-editorial.png) | ![dashboard](docs/assets/theme-dashboard-dark-dramatic.png) |
+| Long-form editorial with prose, figure, pull-quote | Sticky nav · bar/line charts · stat cards |
+
+| docs layout (cool-technical) |
+|:-:|
+| ![docs](docs/assets/theme-docs-cool-technical.png) |
+| Two-column sticky sidebar · docs mode |
 
 ---
 
@@ -133,6 +143,7 @@ Zero dependencies — all interactivity is inline vanilla JS + scoped CSS.
 | `accordion` | Collapsible FAQ using `<details>`/`<summary>` — works without JS |
 | `modal` | Dialog overlay via native `<dialog>` + `showModal()` |
 | `toggle` | Styled checkbox toggle, animates via CSS |
+| `chart` | Chart.js opt-in — bar, line, pie, doughnut — single or multi-dataset |
 
 ### Layout containers
 
@@ -142,6 +153,7 @@ Zero dependencies — all interactivity is inline vanilla JS + scoped CSS.
 | `split` | Horizontal split with configurable ratio |
 | `grid(n)` | n-column CSS grid |
 | `centered` | Horizontally centered container |
+| `docspage` | Two-column sticky-sidebar docs layout — sidebar nav + scrollable main content |
 
 ### Modifiers
 

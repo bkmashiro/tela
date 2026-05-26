@@ -20,6 +20,8 @@ import { renderTabs } from './tabs.js';
 import { renderAccordion } from './accordion.js';
 import { renderModal } from './modal.js';
 import { renderToggle } from './toggle.js';
+import { renderChart } from './chart.js';
+import { renderDocsPage } from './docspage.js';
 
 export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
   hero: {
@@ -139,6 +141,18 @@ export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
     name: 'toggle',
     render: renderToggle,
     validModifiers: ['label', 'pad', 'centered'],
+    requiredProps: [],
+  },
+  chart: {
+    name: 'chart',
+    render: renderChart,
+    validModifiers: ['type', 'pad', 'bg', 'height'],
+    requiredProps: [],
+  },
+  docspage: {
+    name: 'docspage',
+    render: renderDocsPage,
+    validModifiers: ['pad', 'bg'],
     requiredProps: [],
   },
 };
