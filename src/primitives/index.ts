@@ -22,6 +22,8 @@ import { renderModal } from './modal.js';
 import { renderToggle } from './toggle.js';
 import { renderChart } from './chart.js';
 import { renderDocsPage } from './docspage.js';
+import { renderTable } from './table.js';
+import { renderSteps } from './steps.js';
 
 export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
   hero: {
@@ -153,6 +155,18 @@ export const COMPONENT_REGISTRY: Record<string, ComponentDefinition> = {
     name: 'docspage',
     render: renderDocsPage,
     validModifiers: ['pad', 'bg'],
+    requiredProps: [],
+  },
+  table: {
+    name: 'table',
+    render: renderTable,
+    validModifiers: ['pad', 'bg', 'striped'],
+    requiredProps: [],
+  },
+  steps: {
+    name: 'steps',
+    render: renderSteps,
+    validModifiers: ['pad', 'bg', 'dated'],
     requiredProps: [],
   },
 };

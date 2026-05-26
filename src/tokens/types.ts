@@ -31,11 +31,13 @@ export type ThemeName =
   | 'warm-editorial'
   | 'cool-technical'
   | 'neutral-minimal'
-  | 'dark-dramatic';
+  | 'dark-dramatic'
+  | 'report';
 
 export const THEME_NAMES: ThemeName[] = [
   'warm-editorial',
   'cool-technical',
   'neutral-minimal',
   'dark-dramatic',
+  'report',
 ];

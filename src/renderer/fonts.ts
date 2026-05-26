@@ -8,6 +8,8 @@ const GOOGLE_FONTS: Record<string, string> = {
   'Source Serif 4': 'Source+Serif+4:wght@400;500;600',
   'EB Garamond': 'EB+Garamond:wght@400;500',
   'Playfair Display': 'Playfair+Display:wght@400;600',
+  'IBM Plex Serif': 'IBM+Plex+Serif:wght@400;600',
+  'IBM Plex Sans': 'IBM+Plex+Sans:wght@400;500;600',
   'IBM Plex Mono': 'IBM+Plex+Mono:wght@400',
   'JetBrains Mono': 'JetBrains+Mono:wght@400',
   // System fonts — no load needed

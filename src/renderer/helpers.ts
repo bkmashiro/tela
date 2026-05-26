@@ -89,6 +89,7 @@ export const T = {
   // Type weight
   weightBody: tv('weight-body'),
   weightHeading: tv('weight-heading'),
+  weightEmphasis: tv('weight-emphasis'),
   // Leading
   leadingTight: tv('leading-tight'),
   leadingDefault: tv('leading-default'),
