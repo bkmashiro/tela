@@ -161,8 +161,6 @@ function buildDocument(opts: DocumentShellOptions): string {
 
   const modeBodyStyle = mode === 'article'
     ? 'max-width: 720px; margin: 0 auto;'
-    : mode === 'docs'
-    ? 'display: flex; align-items: flex-start;'
     : '';
 
   const bodyStyleAttr = modeBodyStyle ? ` style="${modeBodyStyle}"` : '';

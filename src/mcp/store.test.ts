@@ -25,7 +25,7 @@ describe('DocumentStore - create and render', () => {
     const docId = store.createDocument();
     const result = store.renderDocument(docId);
     expect(result.html).toContain('<!DOCTYPE html>');
-    expect(result.html).toContain('New Page');
+    expect(result.html).toContain('<body');
   });
 
   it('lists documents', () => {
@@ -47,12 +47,13 @@ describe('DocumentStore - section operations', () => {
     const sectionId = store.addSection(docId, `features | grid(3):\n  - title: Feat 1\n    body: Body 1`);
     expect(sectionId).toBeTruthy();
     const doc = store.getDocument(docId);
-    expect(doc.ast.sections.length).toBeGreaterThanOrEqual(2);
+    expect(doc.ast.sections.length).toBeGreaterThanOrEqual(1);
   });
 
   it('updates a section', () => {
     const store = makeStore();
     const docId = store.createDocument();
+    store.addSection(docId, `hero:\n  headline: Original\n`);
     const doc = store.getDocument(docId);
     const sectionId = doc.ast.sections[0].id;
 
@@ -102,6 +103,7 @@ describe('DocumentStore - undo', () => {
   it('undoes a mutation', () => {
     const store = makeStore();
     const docId = store.createDocument();
+    store.addSection(docId, `hero:\n  headline: Original\n`);
 
     const doc = store.getDocument(docId);
     const sectionId = doc.ast.sections[0].id;
@@ -129,6 +131,7 @@ describe('DocumentStore - getSection', () => {
   it('returns annotated fragment', () => {
     const store = makeStore();
     const docId = store.createDocument();
+    store.addSection(docId, `hero:\n  headline: Test\n`);
     const doc = store.getDocument(docId);
     const sectionId = doc.ast.sections[0].id;
 

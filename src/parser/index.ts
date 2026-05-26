@@ -138,10 +138,6 @@ class TelaParser {
       }
     }
 
-    if (sections.length === 0) {
-      throw new ParseError('Document must have at least one section', startLine, 1, this.file);
-    }
-
     return {
       type: 'document',
       frontmatter,

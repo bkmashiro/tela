@@ -216,7 +216,9 @@ hero:
     expect(() => parse(src)).toThrow();
   });
 
-  it('throws ParseError on empty sections', () => {
-    expect(() => parse('---\ntheme: warm-editorial\n---\n')).toThrow(ParseError);
+  it('parses a frontmatter-only document with zero sections', () => {
+    const doc = parse('---\ntheme: warm-editorial\n---\n');
+    expect(doc.sections.length).toBe(0);
+    expect(doc.frontmatter.theme).toBe('warm-editorial');
   });
 });

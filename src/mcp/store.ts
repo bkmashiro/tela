@@ -298,9 +298,6 @@ export class DocumentStore {
       `lang: ${lang}`,
       '---',
       '',
-      'hero:',
-      '  headline: New Page',
-      '',
     ].join('\n');
 
     const doc = this.buildDocument(source);
