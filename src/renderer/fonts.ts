@@ -46,6 +46,10 @@ export function generateFontLinks(tokenValues: Record<string, string>): string {
     }
   }
 
+  // Always include Noto Sans Symbols as a universal fallback for geometric/symbol glyphs
+  // (covers U+25A0–U+25FF and other symbol blocks that decorated serif fonts lack)
+  families.push('Noto+Sans+Symbols:wght@400');
+
   // Deduplicate
   const unique = [...new Set(families)];
   if (unique.length === 0) return '';

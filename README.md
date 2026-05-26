@@ -69,7 +69,7 @@ features | grid(3) gap(lg):
   - icon: ◆ | accent
     title: Composable
     body: 30+ primitives. Combine freely.
-  - icon: ◈ | accent
+  - icon: ◇ | accent
     title: Verifiable
     body: Checks read like design feedback.
   - icon: ◉ | accent

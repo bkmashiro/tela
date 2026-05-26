@@ -43,6 +43,8 @@ export function renderFeature(ctx: RenderContext): string {
   if (icon) {
     html += `  <div class="tela-feature__icon" style="${style({
       'font-size': '24px',
+      'font-family': "'Noto Sans Symbols', system-ui, sans-serif",  // symbol glyphs need Noto or system fallback
+      'line-height': '1',
       'color': T.accentDefault,
       'margin-bottom': T.spaceSm,
     })}">${esc(icon)}</div>\n`;
